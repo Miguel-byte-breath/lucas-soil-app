@@ -18,12 +18,28 @@ const PARAM_OPTIONS = [
   { value: 'bd',   label: 'BD — Densidad aparente' },
 ]
 
+const BASEMAPS = {
+  'OpenStreetMap': L.tileLayer(
+    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    { attribution: '© OpenStreetMap contributors', maxZoom: 19 }
+  ),
+  'PNOA (IGN España)': L.tileLayer(
+    'https://tms-pnoa-ma.idee.es/1.0.0/pnoa-ma/{z}/{x}/{-y}.jpeg',
+    { attribution: '© IGN España — PNOA', maxZoom: 19 }
+  ),
+  'Esri Satellite': L.tileLayer(
+    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    { attribution: '© Esri, Maxar, Earthstar Geographics', maxZoom: 19 }
+  ),
+}
+
 export default function App() {
   const mapRef     = useRef(null)
   const mapObj     = useRef(null)
   const drawnItems = useRef(null)
   const gridLayer  = useRef(null)
   const markersRef = useRef([])
+  const pointsRef  = useRef([])
 
   const [points,    setPoints]    = useState([])
   const [selected,  setSelected]  = useState(null)
@@ -37,6 +53,7 @@ export default function App() {
       .then(r => r.json())
       .then(data => {
         setPoints(data.points)
+        pointsRef.current = data.points
         setLoading(false)
       })
   }, [])
@@ -50,10 +67,11 @@ export default function App() {
       zoom: 6,
     })
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors',
-      maxZoom: 18,
-    }).addTo(map)
+    // Capa base por defecto
+    BASEMAPS['OpenStreetMap'].addTo(map)
+
+    // Control de capas base
+    L.control.layers(BASEMAPS, {}, { position: 'topright' }).addTo(map)
 
     drawnItems.current = new L.FeatureGroup().addTo(map)
     gridLayer.current  = new L.FeatureGroup().addTo(map)
@@ -74,11 +92,23 @@ export default function App() {
     map.on(L.Draw.Event.CREATED, (e) => {
       drawnItems.current.clearLayers()
       drawnItems.current.addLayer(e.layer)
-      setPolygon(e.layer.toGeoJSON())
+      const geojson = e.layer.toGeoJSON()
+      setPolygon(geojson)
+
+      // Centroide del polígono → nearest point
+      const coords = geojson.geometry.coordinates[0]
+      const centLat = coords.reduce((s, c) => s + c[1], 0) / coords.length
+      const centLon = coords.reduce((s, c) => s + c[0], 0) / coords.length
+      const pts = pointsRef.current
+      if (pts.length) {
+        const nearest = findNearest({ lat: centLat, lng: centLon }, pts, 5)
+        setSelected({ clicked: nearest[0], nearest })
+      }
     })
 
     map.on(L.Draw.Event.DELETED, () => {
       setPolygon(null)
+      setSelected(null)
       gridLayer.current.clearLayers()
     })
 
