@@ -61,33 +61,3 @@ export default function GridControls({ polygon, gridParam, setGridParam, options
     </>
   )
 }
-```
-
-Commit: `add GridControls component`
-
----
-
-## Estructura final del repo
-
-Tu repo debe quedar así:
-```
-lucas-soil-app/
-├── public/
-│   └── data/
-│       └── lucas_spain.json
-├── src/
-│   ├── components/
-│   │   ├── ParamPanel.jsx
-│   │   └── GridControls.jsx
-│   ├── utils/
-│   │   ├── spatial.js
-│   │   ├── grid.js
-│   │   └── export.js
-│   ├── App.jsx
-│   ├── main.jsx
-│   └── index.css
-├── index.html
-├── package.json
-├── vite.config.js
-├── .gitignore
-└── README.md
