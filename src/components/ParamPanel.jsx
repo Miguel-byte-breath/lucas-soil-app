@@ -11,7 +11,7 @@ export default function ParamPanel({ selected }) {
   return (
     <>
       <div className="panel-section">
-        <h3>Punto más cercano</h3>
+        <h3>Punto de muestreo LUCAS 2018 Topsoil</h3>
         <div className="param-row">
           <span className="param-label">POINTID</span>
           <span className="param-value">{pt.id}</span>
