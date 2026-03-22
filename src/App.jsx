@@ -180,7 +180,7 @@ export default function App() {
             </div>
           ) : (
             <>
-              <ParamPanel selected={selected} />
+              <ParamPanel selected={selected} polygon={polygon} />
               <button className="btn-export" onClick={handleExport}>
                 Descargar informe Excel
               </button>
