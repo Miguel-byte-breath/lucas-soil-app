@@ -71,15 +71,15 @@ export default function SigpacPanel({ data, loading }) {
       </div>
       <div className="param-row">
         <span className="param-label">Superficie</span>
-        <span className="param-value">{data.superficie}</span>
+        <span className="param-value">{data.superficie} ha</span>
       </div>
       <div className="param-row">
         <span className="param-label">Admisibilidad</span>
-        <span className="param-value">{data.admisibilidad}</span>
+        <span className="param-value">{data.admisibilidad}%</span>
       </div>
       <div className="param-row">
         <span className="param-label">Coef. regadío</span>
-        <span className="param-value">{data.regadio}</span>
+        <span className="param-value">{data.regadio}%</span>
       </div>
       <div className="param-row">
         <span className="param-label">Incidencias</span>
@@ -95,7 +95,7 @@ export default function SigpacPanel({ data, loading }) {
       </div>
       <div className="param-row">
         <span className="param-label">Altitud media</span>
-        <span className="param-value">{data.altitud}</span>
+        <span className="param-value">{data.altitud} m</span>
       </div>
     </div>
   )
