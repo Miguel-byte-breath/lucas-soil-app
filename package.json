@@ -10,8 +10,7 @@
   "dependencies": {
     "leaflet": "^1.9.4",
     "leaflet-draw": "^1.0.4",
-    "xlsx": "^0.18.5",
-    "shp-write": "^0.3.2"
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.1",
