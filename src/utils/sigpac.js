@@ -1,3 +1,33 @@
+import * as turf from '@turf/turf'
+
+// Convierte WKT POLYGON a GeoJSON Feature
+function wktToGeoJSON(wkt) {
+  if (!wkt) return null
+  try {
+    const coordStr = wkt.replace('POLYGON((', '').replace('))', '')
+    const coords = coordStr.split(',').map(pair => {
+      const [lon, lat] = pair.trim().split(' ').map(Number)
+      return [lon, lat]
+    })
+    return turf.polygon([coords])
+  } catch {
+    return null
+  }
+}
+
+// Calcula superficie de intersección en hectáreas
+export function calcularInterseccion(poligonoUsuario, wktRecinto) {
+  try {
+    const recinto = wktToGeoJSON(wktRecinto)
+    if (!recinto || !poligonoUsuario) return null
+    const interseccion = turf.intersect(poligonoUsuario, recinto)
+    if (!interseccion) return null
+    const areaM2 = turf.area(interseccion)
+    return (areaM2 / 10000).toFixed(4)
+  } catch {
+    return null
+  }
+}
 // Códigos de uso SIGPAC
 export const USO_SIGPAC = {
   CF: 'Asoc. Cítricos-Frutales',
@@ -113,5 +143,6 @@ export function formatearRecinto(data) {
     altitud:    r.altitud    != null ? r.altitud + ' m'    : '—',
     regadio:    r.coef_regadio != null ? r.coef_regadio + '%' : '—',
     incidencias: r.incidencias || '—',
+    wkt:        r.wkt || null,
   }
 }
