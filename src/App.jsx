@@ -16,6 +16,7 @@ const PARAM_OPTIONS = [
   { value: 'N',    label: 'N — Nitrógeno' },
   { value: 'usda', label: 'Textura USDA' },
   { value: 'bd',   label: 'BD — Densidad aparente' },
+  { value: 'iva',  label: 'IVA — Índice de Variabilidad Agronómica' },
 ]
 
 const BASEMAPS = {
