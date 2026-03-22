@@ -24,7 +24,8 @@ module.exports = async function handler(req, res) {
   try {
     const response = await fetch(url, { agent })
     if (!response.ok) {
-      return res.status(response.status).json({ error: `SIGPAC error: ${response.status}` })
+      const errText = await response.text()
+      return res.status(response.status).json({ error: `SIGPAC error: ${response.status}`, detail: errText, url })
     }
     const data = await response.json()
     res.setHeader('Cache-Control', 's-maxage=3600')
