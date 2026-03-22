@@ -12,7 +12,7 @@
     "leaflet-draw": "^1.0.4",
     "xlsx": "^0.18.5",
     "jszip": "^3.10.1",
-    "node-fetch": "^3.3.2"
+    "node-fetch": "^2.7.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.1",
