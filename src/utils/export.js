@@ -166,7 +166,8 @@ export function exportGeoJSON(neighbors, polygon) {
 }
 
 export async function exportShapefile(neighbors, polygon) {
-  const shpwrite = (await import('shp-write')).default
+  // Generamos dos GeoJSON separados y los descargamos como .zip usando JSZip
+  const JSZip = (await import('https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js')).default
 
   const pointFeatures = neighbors.map((pt, i) => ({
     type: 'Feature',
@@ -190,46 +191,52 @@ export async function exportShapefile(neighbors, polygon) {
       bd:      pt.bd,
       nuts1:   pt.nuts1 || '',
       nuts2:   pt.nuts2 || '',
-      source:  'LUCAS 2018',
+      source:  'LUCAS 2018 JRC',
     },
   }))
 
-  const downloads = [
-    {
-      name: `LUCAS_puntos_${new Date().toISOString().slice(0, 10)}.zip`,
-      fc: { type: 'FeatureCollection', features: pointFeatures },
-    },
-  ]
+  const fcPuntos = {
+    type: 'FeatureCollection',
+    crs: { type: 'name', properties: { name: 'urn:ogc:def:crs:OGC:1.3:CRS84' } },
+    features: pointFeatures,
+  }
+
+  const zip = new JSZip()
+  zip.file('LUCAS_puntos.geojson', JSON.stringify(fcPuntos, null, 2))
 
   if (polygon) {
-    downloads.push({
-      name: `parcela_${new Date().toISOString().slice(0, 10)}.zip`,
-      fc: {
-        type: 'FeatureCollection',
-        features: [{
-          type: 'Feature',
-          geometry: polygon.geometry,
-          properties: {
-            tipo:   'parcela',
-            fuente: 'LUCAS Soil Explorer',
-            fecha:  new Date().toLocaleDateString('es-ES'),
-          },
-        }],
-      },
-    })
+    const fcParcela = {
+      type: 'FeatureCollection',
+      crs: { type: 'name', properties: { name: 'urn:ogc:def:crs:OGC:1.3:CRS84' } },
+      features: [{
+        type: 'Feature',
+        geometry: polygon.geometry,
+        properties: {
+          tipo:   'parcela_referencia',
+          fuente: 'LUCAS Soil Explorer',
+          fecha:  new Date().toLocaleDateString('es-ES'),
+        },
+      }],
+    }
+    zip.file('parcela_referencia.geojson', JSON.stringify(fcParcela, null, 2))
   }
 
-  for (const dl of downloads) {
-    const blob = await shpwrite.zip(dl.fc, {
-      outputType: 'blob',
-      compression: 'DEFLATE',
-    })
-    const url = URL.createObjectURL(blob)
-    const a   = document.createElement('a')
-    a.href     = url
-    a.download = dl.name
-    a.click()
-    URL.revokeObjectURL(url)
-    await new Promise(r => setTimeout(r, 400))
-  }
+  zip.file('README.txt',
+    'LUCAS Soil Explorer — Exportacion geometrica\n' +
+    '=============================================\n' +
+    'Fuente: LUCAS Soil 2018 (JRC, Comision Europea)\n' +
+    'CRS: EPSG:4326 WGS84\n' +
+    'Contenido:\n' +
+    '  LUCAS_puntos.geojson   — Puntos de muestreo LUCAS con atributos\n' +
+    '  parcela_referencia.geojson — Poligono dibujado por el usuario\n' +
+    'Abrir con QGIS, ArcGIS o cualquier GIS compatible con GeoJSON.\n'
+  )
+
+  const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' })
+  const url  = URL.createObjectURL(blob)
+  const a    = document.createElement('a')
+  a.href     = url
+  a.download = `LUCAS_geometrias_${new Date().toISOString().slice(0, 10)}.zip`
+  a.click()
+  URL.revokeObjectURL(url)
 }
