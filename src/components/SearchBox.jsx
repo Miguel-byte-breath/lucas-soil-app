@@ -69,8 +69,8 @@ export default function SearchBox({ onResult }) {
   return (
     <div style={{
       position: 'absolute',
-      top: 80,
-      left: 10,
+      top: 10,
+      left: 50,
       zIndex: 1000,
       width: 280,
     }}>
