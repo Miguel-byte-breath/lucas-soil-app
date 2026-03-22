@@ -55,6 +55,14 @@ export function paintRaster(map, points, param, layer, sistema = 'secano') {
   const zoom   = map.getZoom()
   const bounds = map.getBounds()
   const step   = stepFromZoom(zoom)
+  
+  // No renderizar a zoom muy bajo — demasiadas celdas
+  if (zoom < 9) {
+    window.dispatchEvent(new CustomEvent('raster-legend', {
+      detail: { param, categories: {}, useAgronomic: false, sistema, zoom, blocked: true }
+    }))
+    return
+  }
 
   const minLat = bounds.getSouth()
   const maxLat = bounds.getNorth()
