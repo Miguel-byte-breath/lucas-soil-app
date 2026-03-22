@@ -35,7 +35,8 @@ const PARAM_LABELS = {
 function formatVal(key, val) {
   if (val == null) return '—'
   if (key === 'P_lod') return val ? 'Sí (P muy bajo)' : 'No'
-  if (key === 'dist_km') return Math.round(val * 10) / 10
+  if (key === 'dist_km') return String(Math.round(val * 10) / 10).replace('.', ',')
+  if (typeof val === 'number') return String(val).replace('.', ',')
   return val
 }
 
@@ -69,9 +70,9 @@ export function exportExcel(neighbors, gridParam) {
     return [
       PARAM_LABELS[p] || p,
       vals.length,
-      Math.round(mean * 100) / 100,
-      Math.min(...vals),
-      Math.max(...vals),
+      String(Math.round(mean * 100) / 100).replace('.', ','),
+      String(Math.min(...vals)).replace('.', ','),
+      String(Math.max(...vals)).replace('.', ','),
       note,
     ]
   })
@@ -115,7 +116,7 @@ export function exportExcel(neighbors, gridParam) {
       })
       .map(r => {
       const supInterseccion = poligono && r.wkt
-        ? calcularInterseccion(poligono, r.wkt) + ' ha'
+        ? String(calcularInterseccion(poligono, r.wkt)).replace('.', ',') + ' ha'
         : '—'
       return [
         r.provincia    || '—',
