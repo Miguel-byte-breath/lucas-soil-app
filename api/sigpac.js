@@ -1,6 +1,4 @@
-// Vercel Serverless Function — proxy SIGPAC
-// Evita ERR_CERT_DATE_INVALID del certificado caducado de sigpac-hubcloud.es
-
+import fetch from 'node-fetch'
 import https from 'https'
 
 const agent = new https.Agent({ rejectUnauthorized: false })
