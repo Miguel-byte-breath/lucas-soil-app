@@ -96,3 +96,141 @@ export function exportExcel(neighbors, gridParam) {
   // Descargar
   XLSX.writeFile(wb, `LUCAS_suelo_${new Date().toISOString().slice(0,10)}.xlsx`)
 }
+export function exportGeoJSON(neighbors, polygon) {
+  const features = []
+
+  neighbors.forEach((pt, i) => {
+    features.push({
+      type: 'Feature',
+      geometry: {
+        type: 'Point',
+        coordinates: [pt.lon, pt.lat],
+      },
+      properties: {
+        rank:    i + 1,
+        pointid: pt.id,
+        dist_km: pt.dist_km ? Math.round(pt.dist_km * 100) / 100 : null,
+        pH:      pt.pH,
+        MOS:     pt.MOS,
+        OC:      pt.OC,
+        N:       pt.N,
+        P:       pt.P,
+        P_lod:   pt.P_lod ? 'si' : 'no',
+        K:       pt.K,
+        CaCO3:   pt.CaCO3,
+        usda:    pt.usda || '',
+        clay:    pt.clay,
+        sand:    pt.sand,
+        silt:    pt.silt,
+        bd:      pt.bd,
+        nuts1:   pt.nuts1 || '',
+        nuts2:   pt.nuts2 || '',
+        lc:      pt.lc || '',
+        date:    pt.date || '',
+        source:  'LUCAS Soil 2018 JRC',
+      },
+    })
+  })
+
+  if (polygon) {
+    features.push({
+      type: 'Feature',
+      geometry: polygon.geometry,
+      properties: {
+        tipo:   'parcela_referencia',
+        fuente: 'LUCAS Soil Explorer',
+        fecha:  new Date().toLocaleDateString('es-ES'),
+      },
+    })
+  }
+
+  const geojson = {
+    type: 'FeatureCollection',
+    crs: {
+      type: 'name',
+      properties: { name: 'urn:ogc:def:crs:OGC:1.3:CRS84' },
+    },
+    features,
+  }
+
+  const blob = new Blob(
+    [JSON.stringify(geojson, null, 2)],
+    { type: 'application/geo+json' }
+  )
+  const url = URL.createObjectURL(blob)
+  const a   = document.createElement('a')
+  a.href     = url
+  a.download = `LUCAS_suelo_${new Date().toISOString().slice(0, 10)}.geojson`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+export async function exportShapefile(neighbors, polygon) {
+  const mod = await import('https://cdn.jsdelivr.net/npm/@mapbox/shp-write@0.4.4/shpwrite.js')
+  const shpwrite = mod.default || mod
+
+  const pointFeatures = neighbors.map((pt, i) => ({
+    type: 'Feature',
+    geometry: { type: 'Point', coordinates: [pt.lon, pt.lat] },
+    properties: {
+      rank:    i + 1,
+      pointid: pt.id,
+      dist_km: pt.dist_km ? Math.round(pt.dist_km * 100) / 100 : null,
+      pH:      pt.pH,
+      MOS:     pt.MOS,
+      OC:      pt.OC,
+      N:       pt.N,
+      P:       pt.P,
+      P_lod:   pt.P_lod ? 'si' : 'no',
+      K:       pt.K,
+      CaCO3:   pt.CaCO3,
+      usda:    pt.usda || '',
+      clay:    pt.clay,
+      sand:    pt.sand,
+      silt:    pt.silt,
+      bd:      pt.bd,
+      nuts1:   pt.nuts1 || '',
+      nuts2:   pt.nuts2 || '',
+      source:  'LUCAS 2018',
+    },
+  }))
+
+  const downloads = [
+    {
+      name: `LUCAS_puntos_${new Date().toISOString().slice(0, 10)}.zip`,
+      fc: { type: 'FeatureCollection', features: pointFeatures },
+    },
+  ]
+
+  if (polygon) {
+    downloads.push({
+      name: `parcela_${new Date().toISOString().slice(0, 10)}.zip`,
+      fc: {
+        type: 'FeatureCollection',
+        features: [{
+          type: 'Feature',
+          geometry: polygon.geometry,
+          properties: {
+            tipo:   'parcela',
+            fuente: 'LUCAS Soil Explorer',
+            fecha:  new Date().toLocaleDateString('es-ES'),
+          },
+        }],
+      },
+    })
+  }
+
+  for (const dl of downloads) {
+    const blob = await shpwrite.zip(dl.fc, {
+      outputType: 'blob',
+      compression: 'DEFLATE',
+    })
+    const url = URL.createObjectURL(blob)
+    const a   = document.createElement('a')
+    a.href     = url
+    a.download = dl.name
+    a.click()
+    URL.revokeObjectURL(url)
+    await new Promise(r => setTimeout(r, 400))
+  }
+}
