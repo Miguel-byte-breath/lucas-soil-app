@@ -70,7 +70,7 @@ export default function App() {
       zoom: 6,
     })
 
-    BASEMAPS['OpenStreetMap'].addTo(map)
+    BASEMAPS['Esri Satellite'].addTo(map)
     L.control.layers(BASEMAPS, {}, { position: 'topright' }).addTo(map)
 
     drawnItems.current = new L.FeatureGroup().addTo(map)
