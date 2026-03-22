@@ -167,7 +167,7 @@ export function exportGeoJSON(neighbors, polygon) {
 
 export async function exportShapefile(neighbors, polygon) {
   // Generamos dos GeoJSON separados y los descargamos como .zip usando JSZip
-  const JSZip = (await import('https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js')).default
+  const { default: JSZip } = await import('jszip')
 
   const pointFeatures = neighbors.map((pt, i) => ({
     type: 'Feature',
