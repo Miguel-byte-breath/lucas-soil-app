@@ -165,7 +165,7 @@ export default function App() {
     }
 
     const render = () => {
-      if (!polygon && pointsRef.current.length) {
+      if (!polygon && pointsRef.current.length && mapObj.current?.getZoom() >= 9) {
         paintRaster(mapObj.current, pointsRef.current, gridParam, rasterLayer.current, sistema)
       }
     }
