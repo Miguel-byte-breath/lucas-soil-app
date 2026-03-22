@@ -116,7 +116,7 @@ export function exportExcel(neighbors, gridParam) {
       })
       .map(r => {
       const supInterseccion = poligono && r.wkt
-        ? String(calcularInterseccion(poligono, r.wkt)).replace('.', ',') + ' ha'
+        ? String(calcularInterseccion(poligono, r.wkt)).replace('.', ',')
         : '—'
       return [
         r.provincia    || '—',
