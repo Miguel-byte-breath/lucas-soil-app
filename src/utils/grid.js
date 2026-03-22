@@ -62,7 +62,9 @@ export function paintGrid(polygon, points, param, layer, sistema = 'secano') {
   const { minLat, maxLat, minLon, maxLon } = getBBox(polygon)
   const latSpan = maxLat - minLat
   const lonSpan = maxLon - minLon
-  const step = Math.max(Math.min(latSpan, lonSpan) / 10, 0.01)
+  const CELL_DEG = 0.0008   // ~90m — unidad mínima SIEX compatible
+  const autoStep = Math.min(latSpan, lonSpan) / 8
+  const step     = Math.min(autoStep, CELL_DEG)
 
   // Campo real en el punto según parámetro seleccionado
   const fieldMap = { pH: 'pH_w', MOS: 'MOS', P: 'P', K: 'K', N: 'N', bd: 'bd', clay: 'clay', sand: 'sand' }
