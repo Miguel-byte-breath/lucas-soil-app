@@ -36,13 +36,14 @@ const BASEMAPS = {
 }
 
 export default function App() {
-  const mapRef      = useRef(null)
-  const mapObj      = useRef(null)
-  const drawnItems  = useRef(null)
-  const gridLayer   = useRef(null)
-  const rasterLayer = useRef(null)
-  const markersRef  = useRef([])
-  const pointsRef   = useRef([])
+  const mapRef        = useRef(null)
+  const mapObj        = useRef(null)
+  const drawnItems    = useRef(null)
+  const gridLayer     = useRef(null)
+  const rasterLayer   = useRef(null)
+  const rasterEnabled = useRef(true)
+  const markersRef    = useRef([])
+  const pointsRef     = useRef([])
 
   const [points,    setPoints]    = useState([])
   const [selected,  setSelected]  = useState(null)
@@ -73,12 +74,35 @@ export default function App() {
     })
 
     BASEMAPS['Esri Satellite'].addTo(map)
-    L.control.layers(BASEMAPS, {}, { position: 'topright' }).addTo(map)
-    L.control.scale({ imperial: false, position: 'bottomleft' }).addTo(map)
 
-    rasterLayer.current = new L.FeatureGroup().addTo(map)
+    rasterLayer.current = new L.FeatureGroup()
     drawnItems.current  = new L.FeatureGroup().addTo(map)
     gridLayer.current   = new L.FeatureGroup().addTo(map)
+
+    // Control de capas con raster como overlay
+    L.control.layers(
+      BASEMAPS,
+      { 'Raster agronómico': rasterLayer.current },
+      { position: 'topright', collapsed: true }
+    ).addTo(map)
+
+    // Escuchar si el raster se activa/desactiva desde el control
+    map.on('overlayadd', (e) => {
+      if (e.name === 'Raster agronómico') {
+        rasterEnabled.current = true
+        if (!polygon && pointsRef.current.length && map.getZoom() >= 9) {
+          paintRaster(map, pointsRef.current, gridParam, rasterLayer.current, sistema)
+        }
+      }
+    })
+    map.on('overlayremove', (e) => {
+      if (e.name === 'Raster agronómico') {
+        rasterEnabled.current = false
+        rasterLayer.current.clearLayers()
+      }
+    })
+
+    L.control.scale({ imperial: false, position: 'bottomleft' }).addTo(map)
 
     const drawControl = new L.Control.Draw({
       draw: {
@@ -156,7 +180,7 @@ export default function App() {
     })
   }, [points])
 
-  // Raster continuo — se activa cuando NO hay polígono
+  // Raster continuo — solo cuando está activado y sin polígono
   useEffect(() => {
     if (!points.length || !mapObj.current || !rasterLayer.current) return
     if (polygon) {
@@ -165,7 +189,12 @@ export default function App() {
     }
 
     const render = () => {
-      if (!polygon && pointsRef.current.length && mapObj.current?.getZoom() >= 9) {
+      if (
+        !polygon &&
+        rasterEnabled.current &&
+        pointsRef.current.length &&
+        mapObj.current?.getZoom() >= 9
+      ) {
         paintRaster(mapObj.current, pointsRef.current, gridParam, rasterLayer.current, sistema)
       }
     }
@@ -175,7 +204,7 @@ export default function App() {
     return () => mapObj.current?.off('moveend', render)
   }, [points, polygon, gridParam, sistema])
 
-  // Grid parcelario — se activa cuando HAY polígono
+  // Grid parcelario
   useEffect(() => {
     if (!polygon || !points.length || !gridLayer.current) return
     paintGrid(polygon, points, gridParam, gridLayer.current, sistema)
@@ -259,12 +288,6 @@ export default function App() {
             sistema={sistema}
             setSistema={setSistema}
           />
-
-          {polygon && (
-            <div className="warning-note">
-              Grid orientativo — densidad LUCAS ~1 punto/18 km². Usar como referencia, no como análisis de precisión parcelaria.
-            </div>
-          )}
         </aside>
       </div>
     </>
