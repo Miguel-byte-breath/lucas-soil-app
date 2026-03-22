@@ -92,6 +92,37 @@ export function exportExcel(neighbors, gridParam) {
   const ws3 = XLSX.utils.aoa_to_sheet(meta)
   ws3['!cols'] = [{ wch: 28 }, { wch: 70 }]
   XLSX.utils.book_append_sheet(wb, ws3, 'Metadatos')
+  
+  // ── Hoja 4: Recintos SIGPAC ──
+  if (window._sigpacRecintos && window._sigpacRecintos.length > 0) {
+    const sigpacHeader = [
+      'Provincia', 'Municipio', 'Polígono', 'Parcela', 'Recinto',
+      'Uso SIGPAC', 'Descripción uso', 'Agrícola',
+      'Superficie recinto (ha)', 'Admisibilidad (%)',
+      'Zona nitratos', 'Altitud media (m)',
+    ]
+    const sigpacRows = window._sigpacRecintos.map(r => [
+      r.provincia    || '—',
+      r.municipio    || '—',
+      r.poligono     || '—',
+      r.parcela      || '—',
+      r.recinto      || '—',
+      r.uso          || '—',
+      r.usoDesc      || '—',
+      r.agricola     ? 'Sí' : 'No',
+      r.superficie   || '—',
+      r.admisibilidad|| '—',
+      r.nitratos     || '—',
+      r.altitud      || '—',
+    ])
+    const ws4 = XLSX.utils.aoa_to_sheet([sigpacHeader, ...sigpacRows])
+    ws4['!cols'] = [
+      { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 10 },
+      { wch: 8 },  { wch: 30 }, { wch: 10 },
+      { wch: 20 }, { wch: 16 }, { wch: 14 }, { wch: 16 },
+    ]
+    XLSX.utils.book_append_sheet(wb, ws4, 'Recintos SIGPAC')
+  }
 
   // Descargar
   XLSX.writeFile(wb, `LUCAS_suelo_${new Date().toISOString().slice(0,10)}.xlsx`)
