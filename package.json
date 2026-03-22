@@ -11,7 +11,8 @@
     "leaflet": "^1.9.4",
     "leaflet-draw": "^1.0.4",
     "xlsx": "^0.18.5",
-    "jszip": "^3.10.1"
+    "jszip": "^3.10.1",
+    "node-fetch": "^3.3.2"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.1",
