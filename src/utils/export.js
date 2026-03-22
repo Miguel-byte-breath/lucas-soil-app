@@ -1,4 +1,6 @@
 import * as XLSX from 'xlsx'
+import * as turf from '@turf/turf'
+import { calcularInterseccion } from './sigpac.js'
 
 const PARAM_LABELS = {
   id:     'POINTID',
@@ -98,28 +100,39 @@ export function exportExcel(neighbors, gridParam) {
     const sigpacHeader = [
       'Provincia', 'Municipio', 'Polígono', 'Parcela', 'Recinto',
       'Uso SIGPAC', 'Descripción uso', 'Agrícola',
-      'Superficie recinto (ha)', 'Admisibilidad (%)',
-      'Zona nitratos', 'Altitud media (m)',
+      'Superficie recinto (ha)', 'Sup. intersección (ha)',
+      'Admisibilidad (%)', 'Coef. regadío (%)',
+      'Zona nitratos', 'Altitud media (m)', 'Incidencias',
     ]
-    const sigpacRows = window._sigpacRecintos.map(r => [
-      r.provincia    || '—',
-      r.municipio    || '—',
-      r.poligono     || '—',
-      r.parcela      || '—',
-      r.recinto      || '—',
-      r.uso          || '—',
-      r.usoDesc      || '—',
-      r.agricola     ? 'Sí' : 'No',
-      r.superficie   || '—',
-      r.admisibilidad|| '—',
-      r.nitratos     || '—',
-      r.altitud      || '—',
-    ])
+   const poligono = window._sigpacPoligono || null
+    const sigpacRows = window._sigpacRecintos.map(r => {
+      const supInterseccion = poligono && r.wkt
+        ? calcularInterseccion(poligono, r.wkt) + ' ha'
+        : '—'
+      return [
+        r.provincia    || '—',
+        r.municipio    || '—',
+        r.poligono     || '—',
+        r.parcela      || '—',
+        r.recinto      || '—',
+        r.uso          || '—',
+        r.usoDesc      || '—',
+        r.agricola     ? 'Sí' : 'No',
+        r.superficie   || '—',
+        supInterseccion,
+        r.admisibilidad|| '—',
+        r.regadio      || '—',
+        r.nitratos     || '—',
+        r.altitud      || '—',
+        r.incidencias  || '—',
+      ]
+    })
     const ws4 = XLSX.utils.aoa_to_sheet([sigpacHeader, ...sigpacRows])
     ws4['!cols'] = [
-      { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 10 },
-      { wch: 8 },  { wch: 30 }, { wch: 10 },
-      { wch: 20 }, { wch: 16 }, { wch: 14 }, { wch: 16 },
+      { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 },
+      { wch: 8 },  { wch: 28 }, { wch: 10 },
+      { wch: 20 }, { wch: 20 }, { wch: 16 }, { wch: 16 },
+      { wch: 14 }, { wch: 16 }, { wch: 20 },
     ]
     XLSX.utils.book_append_sheet(wb, ws4, 'Recintos SIGPAC')
   }
