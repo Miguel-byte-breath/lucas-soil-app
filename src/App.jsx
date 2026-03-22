@@ -7,6 +7,7 @@ import ParamPanel from './components/ParamPanel.jsx'
 import GridControls from './components/GridControls.jsx'
 import SearchBox from './components/SearchBox.jsx'
 import { paintGrid } from './utils/grid.js'
+import { paintRaster } from './utils/raster.js'
 
 const PARAM_OPTIONS = [
   { value: 'pH',   label: 'pH (H₂O)' },
@@ -35,16 +36,17 @@ const BASEMAPS = {
 }
 
 export default function App() {
-  const mapRef     = useRef(null)
-  const mapObj     = useRef(null)
-  const drawnItems = useRef(null)
-  const gridLayer  = useRef(null)
-  const markersRef = useRef([])
-  const pointsRef  = useRef([])
+  const mapRef      = useRef(null)
+  const mapObj      = useRef(null)
+  const drawnItems  = useRef(null)
+  const gridLayer   = useRef(null)
+  const rasterLayer = useRef(null)
+  const markersRef  = useRef([])
+  const pointsRef   = useRef([])
 
   const [points,    setPoints]    = useState([])
   const [selected,  setSelected]  = useState(null)
-  const [gridParam, setGridParam] = useState('pH')
+  const [gridParam, setGridParam] = useState('iva')
   const [polygon,   setPolygon]   = useState(null)
   const [loading,   setLoading]   = useState(true)
   const [coords,    setCoords]    = useState(null)
@@ -61,7 +63,7 @@ export default function App() {
       })
   }, [])
 
-  // Inicializar mapa una sola vez
+  // Inicializar mapa
   useEffect(() => {
     if (mapObj.current) return
 
@@ -72,9 +74,11 @@ export default function App() {
 
     BASEMAPS['Esri Satellite'].addTo(map)
     L.control.layers(BASEMAPS, {}, { position: 'topright' }).addTo(map)
+    L.control.scale({ imperial: false, position: 'bottomleft' }).addTo(map)
 
-    drawnItems.current = new L.FeatureGroup().addTo(map)
-    gridLayer.current  = new L.FeatureGroup().addTo(map)
+    rasterLayer.current = new L.FeatureGroup().addTo(map)
+    drawnItems.current  = new L.FeatureGroup().addTo(map)
+    gridLayer.current   = new L.FeatureGroup().addTo(map)
 
     const drawControl = new L.Control.Draw({
       draw: {
@@ -120,7 +124,7 @@ export default function App() {
     mapObj.current = map
   }, [])
 
-  // Pintar puntos LUCAS cuando carguen
+  // Pintar puntos LUCAS
   useEffect(() => {
     if (!points.length || !mapObj.current) return
 
@@ -152,25 +156,30 @@ export default function App() {
     })
   }, [points])
 
-  // Regenerar grid cuando cambia polígono, parámetro o sistema
+  // Raster continuo — se activa cuando NO hay polígono
+  useEffect(() => {
+    if (!points.length || !mapObj.current || !rasterLayer.current) return
+    if (polygon) {
+      rasterLayer.current.clearLayers()
+      return
+    }
+
+    const render = () => {
+      if (!polygon && pointsRef.current.length) {
+        paintRaster(mapObj.current, pointsRef.current, gridParam, rasterLayer.current, sistema)
+      }
+    }
+
+    render()
+    mapObj.current.on('moveend', render)
+    return () => mapObj.current?.off('moveend', render)
+  }, [points, polygon, gridParam, sistema])
+
+  // Grid parcelario — se activa cuando HAY polígono
   useEffect(() => {
     if (!polygon || !points.length || !gridLayer.current) return
     paintGrid(polygon, points, gridParam, gridLayer.current, sistema)
   }, [polygon, gridParam, points, sistema])
-
-  const handleSearchResult = (result) => {
-    if (!mapObj.current) return
-    mapObj.current.setView([result.lat, result.lon], 12)
-    L.marker([result.lat, result.lon], {
-      icon: L.divIcon({
-        className: '',
-        html: '<div style="background:#1a3a2a;width:10px;height:10px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.4)"></div>',
-        iconAnchor: [5, 5],
-      })
-    }).addTo(mapObj.current)
-      .bindPopup(result.label.split(',')[0])
-      .openPopup()
-  }
 
   const handleExport = () => {
     if (!selected) return
@@ -192,7 +201,19 @@ export default function App() {
         <div style={{ position: 'relative', flex: 1 }}>
           <div id="map" ref={mapRef} style={{ height: '100%', width: '100%' }} />
 
-          <SearchBox onResult={handleSearchResult} />
+          <SearchBox onResult={(result) => {
+            if (!mapObj.current) return
+            mapObj.current.setView([result.lat, result.lon], 12)
+            L.marker([result.lat, result.lon], {
+              icon: L.divIcon({
+                className: '',
+                html: '<div style="background:#1a3a2a;width:10px;height:10px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.4)"></div>',
+                iconAnchor: [5, 5],
+              })
+            }).addTo(mapObj.current)
+              .bindPopup(result.label.split(',')[0])
+              .openPopup()
+          }} />
 
           {coords && (
             <div style={{
