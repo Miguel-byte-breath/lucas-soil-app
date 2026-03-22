@@ -9,7 +9,7 @@ import SearchBox from './components/SearchBox.jsx'
 import { paintGrid } from './utils/grid.js'
 
 const PARAM_OPTIONS = [
-  { value: 'pH',   label: 'pH (CaCl₂)' },
+  { value: 'pH',   label: 'pH (H₂O)' },
   { value: 'MOS',  label: 'MOS — Materia orgánica' },
   { value: 'P',    label: 'P — Fósforo' },
   { value: 'K',    label: 'K — Potasio' },
@@ -41,7 +41,6 @@ export default function App() {
   const gridLayer  = useRef(null)
   const markersRef = useRef([])
   const pointsRef  = useRef([])
-  const coordsRef  = useRef(null)
 
   const [points,    setPoints]    = useState([])
   const [selected,  setSelected]  = useState(null)
@@ -49,6 +48,7 @@ export default function App() {
   const [polygon,   setPolygon]   = useState(null)
   const [loading,   setLoading]   = useState(true)
   const [coords,    setCoords]    = useState(null)
+  const [sistema,   setSistema]   = useState('secano')
 
   // Cargar datos
   useEffect(() => {
@@ -89,13 +89,9 @@ export default function App() {
     })
     map.addControl(drawControl)
 
-    // Coordenadas en tiempo real
     map.on('mousemove', (e) => {
       const { lat, lng } = e.latlng
-      setCoords({
-        lat: lat.toFixed(5),
-        lng: lng.toFixed(5),
-      })
+      setCoords({ lat: lat.toFixed(5), lng: lng.toFixed(5) })
     })
     map.on('mouseout', () => setCoords(null))
 
@@ -156,13 +152,12 @@ export default function App() {
     })
   }, [points])
 
-  // Regenerar grid cuando cambia polígono o parámetro
+  // Regenerar grid cuando cambia polígono, parámetro o sistema
   useEffect(() => {
     if (!polygon || !points.length || !gridLayer.current) return
-    paintGrid(polygon, points, gridParam, gridLayer.current)
-  }, [polygon, gridParam, points])
+    paintGrid(polygon, points, gridParam, gridLayer.current, sistema)
+  }, [polygon, gridParam, points, sistema])
 
-  // Resultado del buscador → centrar mapa
   const handleSearchResult = (result) => {
     if (!mapObj.current) return
     mapObj.current.setView([result.lat, result.lon], 12)
@@ -240,6 +235,8 @@ export default function App() {
             gridParam={gridParam}
             setGridParam={setGridParam}
             options={PARAM_OPTIONS}
+            sistema={sistema}
+            setSistema={setSistema}
           />
 
           {polygon && (
