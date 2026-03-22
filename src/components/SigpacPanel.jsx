@@ -78,6 +78,14 @@ export default function SigpacPanel({ data, loading }) {
         <span className="param-value">{data.admisibilidad}</span>
       </div>
       <div className="param-row">
+        <span className="param-label">Coef. regadío</span>
+        <span className="param-value">{data.regadio}</span>
+      </div>
+      <div className="param-row">
+        <span className="param-label">Incidencias</span>
+        <span className="param-value" style={{ fontSize: 12 }}>{data.incidencias}</span>
+      </div>
+      <div className="param-row">
         <span className="param-label">Zona nitratos</span>
         <span className="param-value" style={{
           color: data.nitratos === 'Sí' ? 'var(--color-text-warning)' : 'inherit'
