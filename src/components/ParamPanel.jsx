@@ -1,4 +1,6 @@
-export default function ParamPanel({ selected }) {
+import { exportGeoJSON, exportShapefile } from '../utils/export.js'
+
+export default function ParamPanel({ selected, polygon }) {
   const pt = selected.clicked
 
   const fmt = (v, dec = 1) => v != null ? Number(v).toFixed(dec) : null
@@ -137,6 +139,21 @@ export default function ParamPanel({ selected }) {
         ))}
         <p className="dist-note" style={{ marginTop: 6 }}>sel. = punto seleccionado</p>
       </div>
+
+      <button
+        className="btn-export"
+        style={{ background: '#185FA5', marginTop: 8 }}
+        onClick={() => exportGeoJSON(selected.nearest, polygon)}
+      >
+        Descargar GeoJSON
+      </button>
+      <button
+        className="btn-export"
+        style={{ background: '#3B6D11', marginTop: 6, marginBottom: 8 }}
+        onClick={() => exportShapefile(selected.nearest, polygon)}
+      >
+        Descargar Shapefile (.zip)
+      </button>
     </>
   )
 }
