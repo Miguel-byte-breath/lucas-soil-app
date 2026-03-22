@@ -1,6 +1,6 @@
 import L from 'leaflet'
 import { pointInPolygon, idw, haversine } from './spatial.js'
-import { classifyPH, classifyMOS, classifyP, classifyK, classifyN, classifyBD } from './agronomic.js'
+import { classifyPH, classifyMOS, classifyP, classifyK, classifyN, classifyBD, indiceAgronomico, colorIndice } from './agronomic.js'
 
 const USDA_COLORS = {
   'sand':            '#F5DEB3',
@@ -47,6 +47,17 @@ function classifyValue(param, val, usda, sistema) {
 
 const AGRONOMIC_PARAMS = ['pH', 'MOS', 'P', 'K', 'N', 'bd']
 
+const fieldMap = {
+  pH:   'pH_w',
+  MOS:  'MOS',
+  P:    'P',
+  K:    'K',
+  N:    'N',
+  bd:   'bd',
+  usda: 'usda',
+  iva:  'pH_w',
+}
+
 export function paintGrid(polygon, points, param, layer, sistema = 'secano') {
   layer.clearLayers()
 
@@ -54,31 +65,19 @@ export function paintGrid(polygon, points, param, layer, sistema = 'secano') {
   const latSpan = maxLat - minLat
   const lonSpan = maxLon - minLon
 
-  const CELL_DEG  = 0.0008
-  const autoStep  = Math.min(latSpan, lonSpan) / 8
-  const step      = Math.min(autoStep, CELL_DEG)
+  const CELL_DEG = 0.0008
+  const autoStep = Math.min(latSpan, lonSpan) / 8
+  const step     = Math.min(autoStep, CELL_DEG)
 
-  const fieldMap = {
-    pH:   'pH_w',
-    MOS:  'MOS',
-    P:    'P',
-    K:    'K',
-    N:    'N',
-    bd:   'bd',
-    usda: 'usda',
-  }
-  const field = fieldMap[param] || param
-
+  const field       = fieldMap[param] || param
   const validPoints = points.filter(pt => pt[field] != null)
   if (!validPoints.length) return
 
-  // Rango para escala continua (BD solo)
-  const values = validPoints.map(pt => pt[field]).filter(v => typeof v === 'number')
-  const minVal = values.length ? Math.min(...values) : 0
-  const maxVal = values.length ? Math.max(...values) : 1
-  const range  = maxVal - minVal || 1
+  const numVals = validPoints.map(pt => pt[field]).filter(v => typeof v === 'number')
+  const minVal  = numVals.length ? Math.min(...numVals) : 0
+  const maxVal  = numVals.length ? Math.max(...numVals) : 1
+  const range   = maxVal - minVal || 1
 
-  // Textura dominante del centroide para clasificar P, K, N, BD
   const centLat = (minLat + maxLat) / 2
   const centLon = (minLon + maxLon) / 2
   const nearest = validPoints
@@ -86,10 +85,10 @@ export function paintGrid(polygon, points, param, layer, sistema = 'secano') {
     .sort((a, b) => a._d - b._d)[0]
   const dominantUSDA = nearest?.usda || 'loam'
 
-  const isAgronomic = AGRONOMIC_PARAMS.includes(param)
   const isUSDA      = param === 'usda'
+  const isIVA       = param === 'iva'
+  const isAgronomic = AGRONOMIC_PARAMS.includes(param)
   const categories  = {}
-  const cells       = []
 
   for (let lat = minLat; lat < maxLat; lat += step) {
     for (let lon = minLon; lon < maxLon; lon += step) {
@@ -97,7 +96,7 @@ export function paintGrid(polygon, points, param, layer, sistema = 'secano') {
       const centerLon = lon + step / 2
       if (!pointInPolygon(centerLat, centerLon, polygon)) continue
 
-      const neighbors = validPoints
+      const neighbors = points
         .map(pt => ({ ...pt, _d: haversine(centerLat, centerLon, pt.lat, pt.lon) }))
         .filter(pt => pt._d < 80)
         .sort((a, b) => a._d - b._d)
@@ -108,8 +107,27 @@ export function paintGrid(polygon, points, param, layer, sistema = 'secano') {
       let fillColor = '#ccccccb3'
       let catLabel  = null
 
-      if (isUSDA) {
-        // Para USDA: tomar la clase del vecino más cercano (no IDW)
+      if (isIVA) {
+        const synth = {
+          pH_w: idw(centerLat, centerLon, neighbors.filter(p => p.pH_w != null), 'pH_w'),
+          MOS:  idw(centerLat, centerLon, neighbors.filter(p => p.MOS  != null), 'MOS'),
+          P:    idw(centerLat, centerLon, neighbors.filter(p => p.P    != null), 'P'),
+          K:    idw(centerLat, centerLon, neighbors.filter(p => p.K    != null), 'K'),
+          usda: dominantUSDA,
+          bd:   null,
+        }
+        const { indice } = indiceAgronomico(synth, sistema)
+        fillColor = colorIndice(indice) + 'b3'
+        if (indice != null) {
+          if (indice >= 80)      catLabel = 'Muy buena aptitud (80-100)'
+          else if (indice >= 60) catLabel = 'Buena aptitud (60-80)'
+          else if (indice >= 40) catLabel = 'Aptitud moderada (40-60)'
+          else if (indice >= 20) catLabel = 'Limitaciones importantes (20-40)'
+          else                   catLabel = 'Limitaciones severas (0-20)'
+          categories[catLabel] = (categories[catLabel] || 0) + 1
+        }
+
+      } else if (isUSDA) {
         const cls = neighbors[0]?.usda?.toLowerCase().trim()
         fillColor  = (USDA_COLORS[cls] || '#cccccc') + 'b3'
         catLabel   = neighbors[0]?.usda || 'Sin dato'
@@ -122,20 +140,6 @@ export function paintGrid(polygon, points, param, layer, sistema = 'secano') {
         fillColor  = cls ? cls.color + 'b3' : '#ccccccb3'
         catLabel   = cls ? cls.label : 'Sin dato'
         categories[catLabel] = (categories[catLabel] || 0) + 1
-
-        const bounds = [[lat, lon], [lat + step, lon + step]]
-        const rect   = L.rectangle(bounds, {
-          color: '#44444433', weight: 0.5, fillColor, fillOpacity: 0.75,
-        })
-        rect.bindTooltip(
-          `<strong>${param.toUpperCase()}</strong>: ${val.toFixed(2)}` +
-          `<br><em>${catLabel}</em>` +
-          `<br><small>IDW ${neighbors.length} puntos LUCAS</small>`,
-          { sticky: true }
-        )
-        cells.push({ rect, val, catLabel })
-        layer.addLayer(rect)
-        continue
 
       } else {
         const val = idw(centerLat, centerLon, neighbors, field)
@@ -151,12 +155,13 @@ export function paintGrid(polygon, points, param, layer, sistema = 'secano') {
       const rect   = L.rectangle(bounds, {
         color: '#44444433', weight: 0.5, fillColor, fillOpacity: 0.75,
       })
+
       rect.bindTooltip(
         `<strong>${param.toUpperCase()}</strong>: ${catLabel || ''}` +
-        `<br><small>${neighbors.length} puntos LUCAS</small>`,
+        `<br><small>IDW ${neighbors.length} pts LUCAS</small>`,
         { sticky: true }
       )
-      cells.push({ rect, catLabel })
+
       layer.addLayer(rect)
     }
   }
@@ -164,11 +169,11 @@ export function paintGrid(polygon, points, param, layer, sistema = 'secano') {
   window.dispatchEvent(new CustomEvent('grid-legend', {
     detail: {
       param,
-      cells:       cells.length,
+      cells:       layer.getLayers().length,
       minVal,
       maxVal,
       categories,
-      useAgronomic: isAgronomic || isUSDA,
+      useAgronomic: isAgronomic || isUSDA || isIVA,
       sistema,
     }
   }))
