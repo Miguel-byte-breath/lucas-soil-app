@@ -50,12 +50,12 @@ export function esAgricola(uso) {
   return USOS_AGRICOLAS.has(uso)
 }
 
-const BASE = 'https://sigpac-hubcloud.es/servicioconsultassigpac/query'
+const PROXY = '/api/sigpac'
 
 // Consulta recinto por punto (clic en mapa)
 export async function consultarPunto(lat, lon) {
   try {
-    const url = `${BASE}/recinfobypoint/4326/${lon}/${lat}.json`
+    const url = `${PROXY}?type=point&lon=${lon}&lat=${lat}`
     const res = await fetch(url)
     if (!res.ok) return null
     const data = await res.json()
@@ -68,8 +68,9 @@ export async function consultarPunto(lat, lon) {
 // Consulta recintos por bbox (polígono dibujado)
 export async function consultarBbox(minLon, minLat, maxLon, maxLat) {
   try {
-    const url = `https://sigpac-hubcloud.es/ogcapisigpac/collections/recintos/items?bbox=${minLon},${minLat},${maxLon},${maxLat}&f=json&limit=100`
-    const res = await fetch(url)
+    const bbox = `${minLon},${minLat},${maxLon},${maxLat}`
+    const url  = `${PROXY}?type=bbox&bbox=${bbox}`
+    const res  = await fetch(url)
     if (!res.ok) return []
     const data = await res.json()
     return data.features || []
