@@ -95,7 +95,7 @@ export function paintRaster(map, points, param, layer, sistema = 'secano') {
         .sort((a, b) => a._d - b._d)
         .slice(0, 8)
 
-      if (!neighbors.length) continue
+      if (!neighbors.length || neighbors[0]._d > 50) continue
 
       const dominantUSDA = neighbors[0]?.usda || 'loam'
       let fillColor = '#cccccc55'
