@@ -4,12 +4,25 @@ import * as turf from '@turf/turf'
 function wktToGeoJSON(wkt) {
   if (!wkt) return null
   try {
-    const coordStr = wkt.replace('POLYGON((', '').replace('))', '')
-    const coords = coordStr.split(',').map(pair => {
-      const [lon, lat] = pair.trim().split(' ').map(Number)
-      return [lon, lat]
-    })
-    return turf.polygon([coords])
+    const inner = wkt.replace(/^POLYGON\s*\(\s*/i, '').replace(/\s*\)$/, '')
+    const rings = []
+    let depth = 0, start = 0
+    for (let i = 0; i < inner.length; i++) {
+      if (inner[i] === '(') { if (depth === 0) start = i + 1; depth++ }
+      else if (inner[i] === ')') {
+        depth--
+        if (depth === 0) {
+          const ring = inner.slice(start, i).trim()
+          rings.push(ring.split(',').map(pair => {
+            const [lon, lat] = pair.trim().split(/\s+/).map(Number)
+            return [lon, lat]
+          }))
+          start = i + 1
+        }
+      }
+    }
+    if (!rings.length) return null
+    return turf.polygon(rings)
   } catch {
     return null
   }
