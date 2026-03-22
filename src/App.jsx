@@ -5,6 +5,7 @@ import { findNearest } from './utils/spatial.js'
 import { exportExcel } from './utils/export.js'
 import ParamPanel from './components/ParamPanel.jsx'
 import GridControls from './components/GridControls.jsx'
+import SearchBox from './components/SearchBox.jsx'
 import { paintGrid } from './utils/grid.js'
 
 const PARAM_OPTIONS = [
@@ -40,12 +41,14 @@ export default function App() {
   const gridLayer  = useRef(null)
   const markersRef = useRef([])
   const pointsRef  = useRef([])
+  const coordsRef  = useRef(null)
 
   const [points,    setPoints]    = useState([])
   const [selected,  setSelected]  = useState(null)
   const [gridParam, setGridParam] = useState('pH')
   const [polygon,   setPolygon]   = useState(null)
   const [loading,   setLoading]   = useState(true)
+  const [coords,    setCoords]    = useState(null)
 
   // Cargar datos
   useEffect(() => {
@@ -67,10 +70,7 @@ export default function App() {
       zoom: 6,
     })
 
-    // Capa base por defecto
     BASEMAPS['OpenStreetMap'].addTo(map)
-
-    // Control de capas base
     L.control.layers(BASEMAPS, {}, { position: 'topright' }).addTo(map)
 
     drawnItems.current = new L.FeatureGroup().addTo(map)
@@ -89,13 +89,22 @@ export default function App() {
     })
     map.addControl(drawControl)
 
+    // Coordenadas en tiempo real
+    map.on('mousemove', (e) => {
+      const { lat, lng } = e.latlng
+      setCoords({
+        lat: lat.toFixed(5),
+        lng: lng.toFixed(5),
+      })
+    })
+    map.on('mouseout', () => setCoords(null))
+
     map.on(L.Draw.Event.CREATED, (e) => {
       drawnItems.current.clearLayers()
       drawnItems.current.addLayer(e.layer)
       const geojson = e.layer.toGeoJSON()
       setPolygon(geojson)
 
-      // Centroide del polígono → nearest point
       const coords = geojson.geometry.coordinates[0]
       const centLat = coords.reduce((s, c) => s + c[1], 0) / coords.length
       const centLon = coords.reduce((s, c) => s + c[0], 0) / coords.length
@@ -153,6 +162,21 @@ export default function App() {
     paintGrid(polygon, points, gridParam, gridLayer.current)
   }, [polygon, gridParam, points])
 
+  // Resultado del buscador → centrar mapa
+  const handleSearchResult = (result) => {
+    if (!mapObj.current) return
+    mapObj.current.setView([result.lat, result.lon], 12)
+    L.marker([result.lat, result.lon], {
+      icon: L.divIcon({
+        className: '',
+        html: '<div style="background:#1a3a2a;width:10px;height:10px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.4)"></div>',
+        iconAnchor: [5, 5],
+      })
+    }).addTo(mapObj.current)
+      .bindPopup(result.label.split(',')[0])
+      .openPopup()
+  }
+
   const handleExport = () => {
     if (!selected) return
     exportExcel(selected.nearest, gridParam)
@@ -170,7 +194,31 @@ export default function App() {
       </header>
 
       <div className="app-body">
-        <div id="map" ref={mapRef} />
+        <div style={{ position: 'relative', flex: 1 }}>
+          <div id="map" ref={mapRef} style={{ height: '100%', width: '100%' }} />
+
+          <SearchBox onResult={handleSearchResult} />
+
+          {coords && (
+            <div style={{
+              position: 'absolute',
+              bottom: 24,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              background: 'rgba(26,58,42,0.85)',
+              color: '#e8f5ee',
+              padding: '4px 12px',
+              borderRadius: 4,
+              fontSize: 12,
+              fontFamily: 'monospace',
+              zIndex: 1000,
+              pointerEvents: 'none',
+              letterSpacing: '0.04em',
+            }}>
+              {coords.lat}° N &nbsp;|&nbsp; {coords.lng}° E &nbsp;·&nbsp; EPSG:4326
+            </div>
+          )}
+        </div>
 
         <aside className="panel">
           {!selected ? (
