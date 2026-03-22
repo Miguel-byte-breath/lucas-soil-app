@@ -30,11 +30,11 @@ export function pointInPolygon(lat, lon, geojson) {
 
   let inside = false
   for (let i = 0, j = coords.length - 1; i < coords.length; j = i++) {
-    const [xi, yi] = coords[i]
+    const [xi, yi] = coords[i]  // xi=lon, yi=lat en GeoJSON
     const [xj, yj] = coords[j]
     const intersect =
-      yi > lon !== yj > lon &&
-      lat < ((xj - xi) * (lon - yi)) / (yj - yi) + xi
+      (yi > lat) !== (yj > lat) &&
+      lon < ((xj - xi) * (lat - yi)) / (yj - yi) + xi
     if (intersect) inside = !inside
   }
   return inside
