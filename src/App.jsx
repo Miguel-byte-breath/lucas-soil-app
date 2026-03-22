@@ -14,8 +14,7 @@ const PARAM_OPTIONS = [
   { value: 'P',    label: 'P — Fósforo' },
   { value: 'K',    label: 'K — Potasio' },
   { value: 'N',    label: 'N — Nitrógeno' },
-  { value: 'clay', label: 'Arcilla %' },
-  { value: 'sand', label: 'Arena %' },
+  { value: 'usda', label: 'Textura USDA' },
   { value: 'bd',   label: 'BD — Densidad aparente' },
 ]
 
