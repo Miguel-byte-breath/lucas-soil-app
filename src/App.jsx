@@ -130,6 +130,7 @@ export default function App() {
       drawnItems.current.addLayer(e.layer)
       const geojson = e.layer.toGeoJSON()
       setPolygon(geojson)
+      window._sigpacPoligono = geojson
 
       const coords = geojson.geometry.coordinates[0]
       const centLat = coords.reduce((s, c) => s + c[1], 0) / coords.length
