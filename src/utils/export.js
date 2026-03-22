@@ -105,16 +105,12 @@ export function exportExcel(neighbors, gridParam) {
       'Zona nitratos', 'Altitud media (m)', 'Incidencias',
     ]
    const poligono = window._sigpacPoligono || null
-    console.log('SIGPAC export — poligono:', poligono ? 'disponible' : 'NULL')
-    console.log('SIGPAC export — recintos:', window._sigpacRecintos?.length)
     const sigpacRows = window._sigpacRecintos
       .filter(r => {
         if (!poligono || !r.wkt) {
-          console.log('sin poligono o wkt — parcela:', r.parcela)
           return true
         }
         const calc = calcularInterseccion(poligono, r.wkt)
-        console.log('parcela', r.parcela, '→', calc)
         return calc !== null
       })
       .map(r => {
