@@ -109,7 +109,7 @@ export default function App() {
     const drawControl = new L.Control.Draw({
       draw: {
         polygon:      true,
-        rectangle:    true,
+        rectangle:    false,
         circle:       false,
         marker:       false,
         polyline:     false,
