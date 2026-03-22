@@ -16,7 +16,7 @@ module.exports = async function handler(req, res) {
     url = `https://sigpac-hubcloud.es/servicioconsultassigpac/query/recinfobypoint/4326/${lon}/${lat}.json`
   } else if (type === 'bbox') {
     if (!bbox) return res.status(400).json({ error: 'bbox requerido' })
-    url = `https://sigpac-hubcloud.es/ogcapisigpac/ogc/features/v1/collections/recintos/items?bbox=${bbox}&f=json&limit=100`
+    url = `https://sigpac-hubcloud.es/servicioconsultassigpac/query/recinfobybbox/4326/${bbox.split(',').join('/')}.json`
   } else {
     return res.status(400).json({ error: 'type debe ser point o bbox' })
   }
