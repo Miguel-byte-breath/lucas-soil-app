@@ -6,8 +6,10 @@ import { exportExcel } from './utils/export.js'
 import ParamPanel from './components/ParamPanel.jsx'
 import GridControls from './components/GridControls.jsx'
 import SearchBox from './components/SearchBox.jsx'
+import SigpacPanel from './components/SigpacPanel.jsx'
 import { paintGrid } from './utils/grid.js'
 import { paintRaster } from './utils/raster.js'
+import { consultarPunto, consultarBbox, formatearRecinto, esAgricola } from './utils/sigpac.js'
 
 const PARAM_OPTIONS = [
   { value: 'pH',   label: 'pH (H₂O)' },
@@ -45,13 +47,15 @@ export default function App() {
   const markersRef    = useRef([])
   const pointsRef     = useRef([])
 
-  const [points,    setPoints]    = useState([])
-  const [selected,  setSelected]  = useState(null)
-  const [gridParam, setGridParam] = useState('iva')
-  const [polygon,   setPolygon]   = useState(null)
-  const [loading,   setLoading]   = useState(true)
-  const [coords,    setCoords]    = useState(null)
-  const [sistema,   setSistema]   = useState('secano')
+  const [points,       setPoints]       = useState([])
+  const [selected,     setSelected]     = useState(null)
+  const [gridParam,    setGridParam]    = useState('iva')
+  const [polygon,      setPolygon]      = useState(null)
+  const [loading,      setLoading]      = useState(true)
+  const [coords,       setCoords]       = useState(null)
+  const [sistema,      setSistema]      = useState('secano')
+  const [sigpacData,   setSigpacData]   = useState(null)
+  const [sigpacLoading,setSigpacLoading]= useState(false)
 
   // Cargar datos
   useEffect(() => {
@@ -79,14 +83,12 @@ export default function App() {
     drawnItems.current  = new L.FeatureGroup().addTo(map)
     gridLayer.current   = new L.FeatureGroup().addTo(map)
 
-    // Control de capas con raster como overlay
     L.control.layers(
       BASEMAPS,
       { 'Raster agronómico': rasterLayer.current },
       { position: 'topright', collapsed: true }
     ).addTo(map)
 
-    // Escuchar si el raster se activa/desactiva desde el control
     map.on('overlayadd', (e) => {
       if (e.name === 'Raster agronómico') {
         rasterEnabled.current = true
@@ -123,7 +125,7 @@ export default function App() {
     })
     map.on('mouseout', () => setCoords(null))
 
-    map.on(L.Draw.Event.CREATED, (e) => {
+    map.on(L.Draw.Event.CREATED, async (e) => {
       drawnItems.current.clearLayers()
       drawnItems.current.addLayer(e.layer)
       const geojson = e.layer.toGeoJSON()
@@ -137,12 +139,27 @@ export default function App() {
         const nearest = findNearest({ lat: centLat, lng: centLon }, pts, 5)
         setSelected({ clicked: nearest[0], nearest })
       }
+
+      // Consultar recintos SIGPAC del bbox del polígono
+      const lons = coords.map(c => c[0])
+      const lats = coords.map(c => c[1])
+      const minLon = Math.min(...lons), maxLon = Math.max(...lons)
+      const minLat = Math.min(...lats), maxLat = Math.max(...lats)
+
+      try {
+        const features = await consultarBbox(minLon, minLat, maxLon, maxLat)
+        window._sigpacRecintos = features.map(f => formatearRecinto(f))
+      } catch {
+        window._sigpacRecintos = []
+      }
     })
 
     map.on(L.Draw.Event.DELETED, () => {
       setPolygon(null)
       setSelected(null)
+      setSigpacData(null)
       gridLayer.current.clearLayers()
+      window._sigpacRecintos = []
     })
 
     mapObj.current = map
@@ -173,14 +190,26 @@ export default function App() {
       markersRef.current.push(marker)
     })
 
-    mapObj.current.on('click', (e) => {
+    mapObj.current.on('click', async (e) => {
       const { lat, lng } = e.latlng
       const nearest = findNearest({ lat, lng }, points, 5)
       setSelected({ clicked: nearest[0], nearest })
+
+      // Consultar SIGPAC por punto
+      setSigpacLoading(true)
+      setSigpacData(null)
+      try {
+        const raw = await consultarPunto(lat, lng)
+        setSigpacData(formatearRecinto(raw))
+      } catch {
+        setSigpacData(null)
+      } finally {
+        setSigpacLoading(false)
+      }
     })
   }, [points])
 
-  // Raster continuo — solo cuando está activado y sin polígono
+  // Raster continuo
   useEffect(() => {
     if (!points.length || !mapObj.current || !rasterLayer.current) return
     if (polygon) {
@@ -274,6 +303,7 @@ export default function App() {
           ) : (
             <>
               <ParamPanel selected={selected} polygon={polygon} />
+              <SigpacPanel data={sigpacData} loading={sigpacLoading} />
               <button className="btn-export" onClick={handleExport}>
                 Descargar informe Excel
               </button>
