@@ -32,12 +32,24 @@ function wktToGeoJSON(wkt) {
 export function calcularInterseccion(poligonoUsuario, wktRecinto) {
   try {
     const recinto = wktToGeoJSON(wktRecinto)
-    if (!recinto || !poligonoUsuario) return null
+    if (!recinto) {
+      console.warn('calcularInterseccion: wktToGeoJSON devolvió null', wktRecinto?.slice(0, 80))
+      return null
+    }
+    if (!poligonoUsuario) {
+      console.warn('calcularInterseccion: poligonoUsuario es null')
+      return null
+    }
     const interseccion = turf.intersect(poligonoUsuario, recinto)
-    if (!interseccion) return null
+    if (!interseccion) {
+      console.info('calcularInterseccion: sin intersección — recinto fuera del polígono')
+      return null
+    }
     const areaM2 = turf.area(interseccion)
+    console.info('calcularInterseccion: área =', areaM2, 'm²')
     return (areaM2 / 10000).toFixed(4)
-  } catch {
+  } catch (err) {
+    console.error('calcularInterseccion ERROR:', err.message, wktRecinto?.slice(0, 80))
     return null
   }
 }
