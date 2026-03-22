@@ -95,19 +95,23 @@ export async function consultarUsosVista(bounds) {
 // Formatear datos de recinto para mostrar en panel
 export function formatearRecinto(data) {
   if (!data) return null
-  const props = data.properties || data
+  // La API devuelve un array — cogemos el primer elemento
+  const r = Array.isArray(data) ? data[0] : (data.properties || data)
+  if (!r) return null
   return {
-    uso:        props.uso_sigpac || props.uso || '—',
-    usoDesc:    USO_SIGPAC[props.uso_sigpac || props.uso] || '—',
-    agricola:   esAgricola(props.uso_sigpac || props.uso),
-    provincia:  props.provincia || '—',
-    municipio:  props.municipio || '—',
-    poligono:   props.poligono  || '—',
-    parcela:    props.parcela   || '—',
-    recinto:    props.recinto   || '—',
-    superficie: props.superficie ? (props.superficie / 10000).toFixed(4) + ' ha' : '—',
-    admisibilidad: props.coef_admisibilidad != null ? props.coef_admisibilidad + '%' : '—',
-    nitratos:   props.zona_nitrato ? 'Sí' : 'No',
-    altitud:    props.altitud_media ? props.altitud_media + ' m' : '—',
+    uso:        r.uso_sigpac || '—',
+    usoDesc:    USO_SIGPAC[r.uso_sigpac] || '—',
+    agricola:   esAgricola(r.uso_sigpac),
+    provincia:  r.provincia  != null ? String(r.provincia)  : '—',
+    municipio:  r.municipio  != null ? String(r.municipio)  : '—',
+    poligono:   r.poligono   != null ? String(r.poligono)   : '—',
+    parcela:    r.parcela    != null ? String(r.parcela)    : '—',
+    recinto:    r.recinto    != null ? String(r.recinto)    : '—',
+    superficie: r.superficie != null ? r.superficie.toFixed(4) + ' ha' : '—',
+    admisibilidad: r.admisibilidad != null ? r.admisibilidad + '%' : '—',
+    nitratos:   r.zona_nitrato ? 'Sí' : 'No',
+    altitud:    r.altitud    != null ? r.altitud + ' m'    : '—',
+    regadio:    r.coef_regadio != null ? r.coef_regadio + '%' : '—',
+    incidencias: r.incidencias || '—',
   }
 }
