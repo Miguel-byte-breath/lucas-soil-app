@@ -166,8 +166,7 @@ export function exportGeoJSON(neighbors, polygon) {
 }
 
 export async function exportShapefile(neighbors, polygon) {
-  const mod = await import('https://cdn.jsdelivr.net/npm/@mapbox/shp-write@0.4.4/shpwrite.js')
-  const shpwrite = mod.default || mod
+  const shpwrite = (await import('@mapbox/shp-write')).default
 
   const pointFeatures = neighbors.map((pt, i) => ({
     type: 'Feature',
