@@ -157,6 +157,7 @@ export default function App() {
 
     map.on(L.Draw.Event.DELETED, () => {
       setPolygon(null)
+      window._sigpacPoligono = null
       setSelected(null)
       setSigpacData(null)
       gridLayer.current.clearLayers()
