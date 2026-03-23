@@ -166,7 +166,7 @@ const MAX_SCORE = 5
 
 export function indiceAgronomico(pt, sistema) {
   const usda = pt.usda
-  cconst clases = {
+  const clases = {
     pH:      classifyPH(pt.pH_w),
     textura: classifyTextura(pt.usda),
     MOS:     classifyMOS(pt.MOS, sistema),
