@@ -45,6 +45,7 @@ body {
 #map {
   flex: 1;
   height: 100%;
+  cursor: default;
 }
 
 .panel {
