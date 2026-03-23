@@ -127,6 +127,7 @@ export function exportExcel(neighbors, gridParam, sistema = 'secano', polygon = 
     ['CRS', 'EPSG:4326 — WGS84'],
     ['Nota orientativa', 'Densidad media LUCAS ~1 punto/18 km². Datos de referencia, no de precisión parcelaria.'],
     ['Generado con', 'LUCAS Soil Explorer — VisualNACert'],
+    ['Licencia datos SIGPAC', 'FEGA — Fondo Español de Garantía Agraria. Datos SIGPAC bajo licencia Creative Commons BY 4.0. https://www.fega.gob.es'],
     ['Fecha exportación', new Date().toLocaleDateString('es-ES')],
   ]
   const ws3 = XLSX.utils.aoa_to_sheet(meta)
