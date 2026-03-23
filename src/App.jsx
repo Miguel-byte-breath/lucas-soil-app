@@ -241,9 +241,9 @@ export default function App() {
     paintGrid(polygon, points, gridParam, gridLayer.current, sistema)
   }, [polygon, gridParam, points, sistema])
 
-  const handleExport = () => {
+ const handleExport = () => {
     if (!selected) return
-    exportExcel(selected.nearest, gridParam)
+    exportExcel(selected.nearest, gridParam, sistema, polygon)
   }
 
   return (
