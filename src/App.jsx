@@ -77,7 +77,10 @@ export default function App() {
       zoom: 6,
     })
 
-    BASEMAPS['Esri Satellite'].addTo(map)
+   BASEMAPS['Esri Satellite'].addTo(map)
+    map.attributionControl.addAttribution(
+      '© <a href="https://www.fega.gob.es" target="_blank">FEGA</a> — SIGPAC CC BY 4.0'
+    )
 
     rasterLayer.current = new L.FeatureGroup()
     drawnItems.current  = new L.FeatureGroup().addTo(map)
