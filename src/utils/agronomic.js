@@ -7,6 +7,26 @@ export function textureGroup(usda) {
   return 'fina'
 }
 
+export function classifyTextura(usda) {
+  if (!usda) return null
+  const scores = {
+    'loam':             5.0,
+    'silt loam':        4.5,
+    'sandy loam':       4.0,
+    'clay loam':        4.0,
+    'silty clay loam':  3.5,
+    'sandy clay loam':  3.5,
+    'loamy sand':       2.5,
+    'silt':             2.5,
+    'silty clay':       2.0,
+    'sandy clay':       2.0,
+    'clay':             1.5,
+    'sand':             1.0,
+  }
+  const key   = usda.toLowerCase().trim()
+  const score = scores[key] ?? 2.5
+  return { label: usda, score, color: '#888' }
+}
 // pH — usa pH_H2O directamente (comparable con tabla FertiPRO)
 export function classifyPH(pH_w) {
   if (pH_w == null) return null
@@ -141,18 +161,17 @@ export function classifyBD(bd, usda) {
 }
 
 // Índice agronómico compuesto (0-100)
-const PESOS = { pH: 25, MOS: 20, P: 15, K: 15, N: 10, BD: 5 }
+const PESOS = { pH: 25, textura: 25, MOS: 20, P: 15, K: 15 }
 const MAX_SCORE = 5
 
 export function indiceAgronomico(pt, sistema) {
   const usda = pt.usda
-  const clases = {
-    pH:  classifyPH(pt.pH_w),
-    MOS: classifyMOS(pt.MOS, sistema),
-    P:   classifyP(pt.P, usda, sistema),
-    K:   classifyK(pt.K, usda, sistema),
-    N:   classifyN(pt.N, usda),
-    BD:  classifyBD(pt.bd, usda),
+  cconst clases = {
+    pH:      classifyPH(pt.pH_w),
+    textura: classifyTextura(pt.usda),
+    MOS:     classifyMOS(pt.MOS, sistema),
+    P:       classifyP(pt.P, usda, sistema),
+    K:       classifyK(pt.K, usda, sistema),
   }
   let pesoTotal = 0
   let suma = 0
@@ -179,11 +198,10 @@ export function colorIndice(indice) {
 // Clasificar un punto completo para mostrar en panel lateral
 export function classifyPoint(pt, sistema) {
   return {
-    pH:  classifyPH(pt.pH_w),
-    MOS: classifyMOS(pt.MOS, sistema),
-    P:   classifyP(pt.P, pt.usda, sistema),
-    K:   classifyK(pt.K, pt.usda, sistema),
-    N:   classifyN(pt.N, pt.usda),
-    BD:  classifyBD(pt.bd, pt.usda),
+    pH:      classifyPH(pt.pH_w),
+    textura: classifyTextura(pt.usda),
+    MOS:     classifyMOS(pt.MOS, sistema),
+    P:       classifyP(pt.P, pt.usda, sistema),
+    K:       classifyK(pt.K, pt.usda, sistema),
   }
 }
