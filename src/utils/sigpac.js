@@ -162,7 +162,7 @@ export function formatearRecinto(data) {
     poligono:   r.poligono   != null ? String(r.poligono)   : '—',
     parcela:    r.parcela    != null ? String(r.parcela)    : '—',
     recinto:    r.recinto    != null ? String(r.recinto)    : '—',
-    superficie: r.superficie != null ? String(r.superficie.toFixed(4)).replace('.', ',') : '—',
+    superficie: r.superficie != null ? parseFloat(r.superficie.toFixed(4)) : '—',
     admisibilidad: r.admisibilidad != null ? r.admisibilidad : '—',
     nitratos:   r.zona_nitrato ? 'Sí' : 'No',
     altitud:    r.altitud    != null ? r.altitud + ' m'    : '—',
