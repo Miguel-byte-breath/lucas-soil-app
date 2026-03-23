@@ -1,6 +1,8 @@
 import * as XLSX from 'xlsx'
 import * as turf from '@turf/turf'
 import { calcularInterseccion } from './sigpac.js'
+import { indiceAgronomico, classifyTextura } from './agronomic.js'
+import { idw, haversine } from './spatial.js'
 
 const PARAM_LABELS = {
   id:     'POINTID',
@@ -40,15 +42,25 @@ function formatVal(key, val) {
   return val
 }
 
-export function exportExcel(neighbors, gridParam) {
+export function exportExcel(neighbors, gridParam, sistema = 'secano', polygon = null) {
   const wb = XLSX.utils.book_new()
 
   // ── Hoja 1: Puntos vecinos ──
   const keys = Object.keys(PARAM_LABELS)
-  const header = keys.map(k => PARAM_LABELS[k])
-  const rows = neighbors.map(pt =>
-    keys.map(k => formatVal(k, pt[k]))
-  )
+  const header = [...keys.map(k => PARAM_LABELS[k]), 'IVA (0-100)', 'Categoría IVA', 'pH score', 'Textura score', 'MOS score', 'P score', 'K score']
+  const rows = neighbors.map(pt => {
+    const { indice, clases } = indiceAgronomico(pt, sistema)
+    return [
+      ...keys.map(k => formatVal(k, pt[k])),
+      indice ?? '—',
+      indice == null ? '—' : indice >= 80 ? 'Muy buena aptitud' : indice >= 60 ? 'Buena aptitud' : indice >= 40 ? 'Aptitud moderada' : indice >= 20 ? 'Limitaciones importantes' : 'Limitaciones severas',
+      clases.pH?.score      ?? '—',
+      clases.textura?.score ?? '—',
+      clases.MOS?.score     ?? '—',
+      clases.P?.score       ?? '—',
+      clases.K?.score       ?? '—',
+    ]
+  })
   const ws1 = XLSX.utils.aoa_to_sheet([header, ...rows])
   ws1['!cols'] = header.map(() => ({ wch: 22 }))
   XLSX.utils.book_append_sheet(wb, ws1, 'Puntos vecinos')
@@ -76,6 +88,31 @@ export function exportExcel(neighbors, gridParam) {
       note,
     ]
   })
+  // Fila IVA IDW centroide (solo si hay polígono)
+  if (polygon) {
+    const coords = polygon.geometry.coordinates[0]
+    const centLat = coords.reduce((s, c) => s + c[1], 0) / coords.length
+    const centLon = coords.reduce((s, c) => s + c[0], 0) / coords.length
+    const synth = {
+      pH_w: idw(centLat, centLon, neighbors.filter(p => p.pH_w != null), 'pH_w'),
+      MOS:  idw(centLat, centLon, neighbors.filter(p => p.MOS  != null), 'MOS'),
+      P:    idw(centLat, centLon, neighbors.filter(p => p.P    != null), 'P'),
+      K:    idw(centLat, centLon, neighbors.filter(p => p.K    != null), 'K'),
+      usda: neighbors[0]?.usda || 'loam',
+    }
+    const { indice, clases } = indiceAgronomico(synth, sistema)
+    const catIva = indice == null ? '—' : indice >= 80 ? 'Muy buena aptitud' : indice >= 60 ? 'Buena aptitud' : indice >= 40 ? 'Aptitud moderada' : indice >= 20 ? 'Limitaciones importantes' : 'Limitaciones severas'
+    statsRows.push(
+      ['', '', '', '', '', ''],
+      ['IVA — Índice Variabilidad Agronómica (IDW centroide)', '', '', '', '', ''],
+      ['IVA calculado', indice ?? '—', '', '', '', catIva],
+      ['pH (H₂O) — score/5', clases.pH?.score ?? '—', '', '', '', clases.pH?.label ?? '—'],
+      ['Textura USDA — score/5', clases.textura?.score ?? '—', '', '', '', clases.textura?.label ?? '—'],
+      ['MOS — score/5', clases.MOS?.score ?? '—', '', '', '', clases.MOS?.label ?? '—'],
+      ['P — score/5', clases.P?.score ?? '—', '', '', '', clases.P?.label ?? '—'],
+      ['K — score/5', clases.K?.score ?? '—', '', '', '', clases.K?.label ?? '—'],
+    )
+  }
   const ws2 = XLSX.utils.aoa_to_sheet([statsHeader, ...statsRows])
   ws2['!cols'] = [{ wch: 28 }, { wch: 6 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 45 }]
   XLSX.utils.book_append_sheet(wb, ws2, 'Estadísticas entorno')
