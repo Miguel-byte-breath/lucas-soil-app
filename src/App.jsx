@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import L from 'leaflet'
-import 'leaflet-draw'
+import '@geoman-io/leaflet-geoman-free'
+import '@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css'
 import { findNearest } from './utils/spatial.js'
 import { exportExcel } from './utils/export.js'
 import ParamPanel from './components/ParamPanel.jsx'
@@ -109,18 +110,21 @@ export default function App() {
 
     L.control.scale({ imperial: false, position: 'bottomleft' }).addTo(map)
 
-    const drawControl = new L.Control.Draw({
-      draw: {
-        polygon:      true,
-        rectangle:    false,
-        circle:       false,
-        marker:       false,
-        polyline:     false,
-        circlemarker: false,
-      },
-      edit: { featureGroup: drawnItems.current },
+    map.pm.addControls({
+      position:       'topleft',
+      drawPolygon:    true,
+      drawMarker:     false,
+      drawCircle:     false,
+      drawPolyline:   false,
+      drawRectangle:  false,
+      drawCircleMarker: false,
+      editMode:       true,
+      dragMode:       false,
+      cutPolygon:     false,
+      removalMode:    true,
     })
-    map.addControl(drawControl)
+
+    map.pm.setLang('es')
 
     map.on('mousemove', (e) => {
       const { lat, lng } = e.latlng
@@ -128,7 +132,7 @@ export default function App() {
     })
     map.on('mouseout', () => setCoords(null))
 
-    map.on(L.Draw.Event.CREATED, async (e) => {
+    map.on('pm:create', async (e) => {
       drawnItems.current.clearLayers()
       drawnItems.current.addLayer(e.layer)
       const geojson = e.layer.toGeoJSON()
@@ -158,7 +162,7 @@ export default function App() {
       }
     })
 
-    map.on(L.Draw.Event.DELETED, () => {
+    map.on('pm:remove', () => {
       setPolygon(null)
       window._sigpacPoligono = null
       setSelected(null)
