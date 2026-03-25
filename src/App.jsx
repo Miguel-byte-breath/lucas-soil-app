@@ -57,6 +57,7 @@ export default function App() {
   const [sistema,      setSistema]      = useState('secano')
   const [sigpacData,   setSigpacData]   = useState(null)
   const [sigpacLoading,setSigpacLoading]= useState(false)
+  const [infoModal,    setInfoModal]    = useState(false)
 
   // Cargar datos
   useEffect(() => {
@@ -262,6 +263,25 @@ export default function App() {
             ? 'Cargando datos…'
             : `${points.length.toLocaleString()} puntos · LUCAS 2018`}
         </span>
+        <button
+          onClick={() => setInfoModal(true)}
+          style={{
+            marginLeft: 'auto',
+            background: 'transparent',
+            border: '1px solid #9fd3b5',
+            borderRadius: '50%',
+            color: '#9fd3b5',
+            width: 24,
+            height: 24,
+            fontSize: 13,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}
+          title="Información sobre la metodología"
+        >ℹ</button>
       </header>
 
       <div className="app-body">
