@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "leaflet": "^1.9.4",
-    "leaflet-draw": "^1.0.4",
+    "@geoman-io/leaflet-geoman-free": "^2.16.0",
     "xlsx": "^0.18.5",
     "jszip": "^3.10.1",
     "node-fetch": "^2.7.0",
