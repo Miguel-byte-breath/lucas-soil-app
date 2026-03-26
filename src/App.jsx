@@ -298,33 +298,29 @@ export default function App() {
               position: 'absolute', top: 12, right: 16,
               background: 'transparent', border: 'none',
               fontSize: 20, cursor: 'pointer', color: '#888',
-            }}>✕</button>
-
+            }}>X</button>
             <h2 style={{ color: '#1a3a2a', marginBottom: 16, fontSize: 16 }}>
-              LUCAS Soil Explorer — Metodología
+              LUCAS Soil Explorer — Metodologia
             </h2>
-
-            <h3 style={{ fontSize: 13, color: '#555', marginBottom: 8 }}>¿Qué es?</h3>
+            <h3 style={{ fontSize: 13, color: '#555', marginBottom: 8 }}>Que es?</h3>
             <p style={{ fontSize: 13, color: '#333', marginBottom: 16, lineHeight: 1.6 }}>
-              Explorador de datos de suelo LUCAS 2018 (JRC, Comisión Europea) para España.
+              Explorador de datos de suelo LUCAS 2018 (JRC, Comision Europea) para Espana.
               Combina 3.867 puntos de muestreo con datos SIGPAC para caracterizar el entorno
-              edáfico de cualquier parcela, en coherencia con el RD 1051/2022.
+              edafico de cualquier parcela, en coherencia con el RD 1051/2022.
             </p>
-
-            <h3 style={{ fontSize: 13, color: '#555', marginBottom: 8 }}>IVA — Índice de Variabilidad Agronómica</h3>
+            <h3 style={{ fontSize: 13, color: '#555', marginBottom: 8 }}>IVA — Indice de Variabilidad Agronomica</h3>
             <p style={{ fontSize: 13, color: '#333', marginBottom: 8, lineHeight: 1.6 }}>
-              Índice compuesto (0–100) calculado por IDW sobre los puntos LUCAS del entorno.
-              Fórmula: <code>IVA = Σ (score_i / 5 × peso_i) / Σ peso_i × 100</code>
+              Indice compuesto (0-100) calculado por IDW sobre los puntos LUCAS del entorno.
             </p>
             <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse', marginBottom: 16 }}>
               <thead>
                 <tr style={{ background: '#f0f7f0' }}>
-                  <th style={{ padding: '6px 8px', textAlign: 'left', border: '1px solid #ddd' }}>Parámetro</th>
+                  <th style={{ padding: '6px 8px', textAlign: 'left', border: '1px solid #ddd' }}>Parametro</th>
                   <th style={{ padding: '6px 8px', textAlign: 'left', border: '1px solid #ddd' }}>Peso</th>
                 </tr>
               </thead>
               <tbody>
-                {[['pH (H₂O)', '25%'], ['Textura USDA', '25%'], ['MOS', '20%'], ['P — Fósforo', '15%'], ['K — Potasio', '15%']].map(([p, w]) => (
+                {[['pH (H2O)', '25%'], ['Textura USDA', '25%'], ['MOS', '20%'], ['P Fosforo', '15%'], ['K Potasio', '15%']].map(([p, w]) => (
                   <tr key={p}>
                     <td style={{ padding: '5px 8px', border: '1px solid #eee' }}>{p}</td>
                     <td style={{ padding: '5px 8px', border: '1px solid #eee' }}>{w}</td>
@@ -332,16 +328,15 @@ export default function App() {
                 ))}
               </tbody>
             </table>
-
             <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse', marginBottom: 16 }}>
               <thead>
                 <tr style={{ background: '#f0f7f0' }}>
                   <th style={{ padding: '6px 8px', textAlign: 'left', border: '1px solid #ddd' }}>Rango IVA</th>
-                  <th style={{ padding: '6px 8px', textAlign: 'left', border: '1px solid #ddd' }}>Categoría</th>
+                  <th style={{ padding: '6px 8px', textAlign: 'left', border: '1px solid #ddd' }}>Categoria</th>
                 </tr>
               </thead>
               <tbody>
-                {[['80–100','Muy buena aptitud'],['60–80','Buena aptitud'],['40–60','Aptitud moderada'],['20–40','Limitaciones importantes'],['0–20','Limitaciones severas']].map(([r, c]) => (
+                {[['80-100','Muy buena aptitud'],['60-80','Buena aptitud'],['40-60','Aptitud moderada'],['20-40','Limitaciones importantes'],['0-20','Limitaciones severas']].map(([r, c]) => (
                   <tr key={r}>
                     <td style={{ padding: '5px 8px', border: '1px solid #eee' }}>{r}</td>
                     <td style={{ padding: '5px 8px', border: '1px solid #eee' }}>{c}</td>
@@ -349,15 +344,25 @@ export default function App() {
                 ))}
               </tbody>
             </table>
-
             <h3 style={{ fontSize: 13, color: '#555', marginBottom: 8 }}>Fuentes y licencias</h3>
             <p style={{ fontSize: 12, color: '#555', lineHeight: 1.6, marginBottom: 8 }}>
-              <strong>Datos suelo:</strong> LUCAS Soil 2018 — Joint Research Centre (JRC), Comisión Europea. Uso libre con atribución.
+              <strong>Datos suelo:</strong> LUCAS Soil 2018, JRC, Comision Europea. Uso libre con atribucion.
+            </p>
+            <p style={{ fontSize: 12, color: '#555', lineHeight: 1.6, marginBottom: 8 }}>
+              <strong>Datos SIGPAC:</strong> FEGA, Creative Commons BY 4.0.
             </p>
             <p style={{ fontSize: 12, color: '#555', lineHeight: 1.6, marginBottom: 16 }}>
-              <strong>Datos SIGPAC:</strong> FEGA — Creative Commons BY 4.0.
+              <strong>Marco normativo:</strong> RD 1051/2022, nutricion sostenible de suelos agrarios.
             </p>
-            <p style={{ fontSize: 12, color:
+            <a href="https://github.com/Miguel-byte-breath/lucas-soil-app"
+              target="_blank" rel="noopener noreferrer"
+              style={{ fontSize: 12, color: '#1a5c38' }}>
+              Ver documentacion completa en GitHub
+            </a>
+          </div>
+        </div>
+      )}
+
       <div className="app-body">
         <div style={{ position: 'relative', flex: 1 }}>
           <div id="map" ref={mapRef} style={{ height: '100%', width: '100%' }} />
