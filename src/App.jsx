@@ -283,7 +283,81 @@ export default function App() {
           title="Información sobre la metodología"
         >ℹ</button>
       </header>
+{infoModal && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 9999,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }} onClick={() => setInfoModal(false)}>
+          <div style={{
+            background: '#fff', borderRadius: 8, padding: 32,
+            maxWidth: 640, width: '90%', maxHeight: '80vh',
+            overflowY: 'auto', position: 'relative',
+          }} onClick={e => e.stopPropagation()}>
+            <button onClick={() => setInfoModal(false)} style={{
+              position: 'absolute', top: 12, right: 16,
+              background: 'transparent', border: 'none',
+              fontSize: 20, cursor: 'pointer', color: '#888',
+            }}>✕</button>
 
+            <h2 style={{ color: '#1a3a2a', marginBottom: 16, fontSize: 16 }}>
+              LUCAS Soil Explorer — Metodología
+            </h2>
+
+            <h3 style={{ fontSize: 13, color: '#555', marginBottom: 8 }}>¿Qué es?</h3>
+            <p style={{ fontSize: 13, color: '#333', marginBottom: 16, lineHeight: 1.6 }}>
+              Explorador de datos de suelo LUCAS 2018 (JRC, Comisión Europea) para España.
+              Combina 3.867 puntos de muestreo con datos SIGPAC para caracterizar el entorno
+              edáfico de cualquier parcela, en coherencia con el RD 1051/2022.
+            </p>
+
+            <h3 style={{ fontSize: 13, color: '#555', marginBottom: 8 }}>IVA — Índice de Variabilidad Agronómica</h3>
+            <p style={{ fontSize: 13, color: '#333', marginBottom: 8, lineHeight: 1.6 }}>
+              Índice compuesto (0–100) calculado por IDW sobre los puntos LUCAS del entorno.
+              Fórmula: <code>IVA = Σ (score_i / 5 × peso_i) / Σ peso_i × 100</code>
+            </p>
+            <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse', marginBottom: 16 }}>
+              <thead>
+                <tr style={{ background: '#f0f7f0' }}>
+                  <th style={{ padding: '6px 8px', textAlign: 'left', border: '1px solid #ddd' }}>Parámetro</th>
+                  <th style={{ padding: '6px 8px', textAlign: 'left', border: '1px solid #ddd' }}>Peso</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[['pH (H₂O)', '25%'], ['Textura USDA', '25%'], ['MOS', '20%'], ['P — Fósforo', '15%'], ['K — Potasio', '15%']].map(([p, w]) => (
+                  <tr key={p}>
+                    <td style={{ padding: '5px 8px', border: '1px solid #eee' }}>{p}</td>
+                    <td style={{ padding: '5px 8px', border: '1px solid #eee' }}>{w}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse', marginBottom: 16 }}>
+              <thead>
+                <tr style={{ background: '#f0f7f0' }}>
+                  <th style={{ padding: '6px 8px', textAlign: 'left', border: '1px solid #ddd' }}>Rango IVA</th>
+                  <th style={{ padding: '6px 8px', textAlign: 'left', border: '1px solid #ddd' }}>Categoría</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[['80–100','Muy buena aptitud'],['60–80','Buena aptitud'],['40–60','Aptitud moderada'],['20–40','Limitaciones importantes'],['0–20','Limitaciones severas']].map(([r, c]) => (
+                  <tr key={r}>
+                    <td style={{ padding: '5px 8px', border: '1px solid #eee' }}>{r}</td>
+                    <td style={{ padding: '5px 8px', border: '1px solid #eee' }}>{c}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <h3 style={{ fontSize: 13, color: '#555', marginBottom: 8 }}>Fuentes y licencias</h3>
+            <p style={{ fontSize: 12, color: '#555', lineHeight: 1.6, marginBottom: 8 }}>
+              <strong>Datos suelo:</strong> LUCAS Soil 2018 — Joint Research Centre (JRC), Comisión Europea. Uso libre con atribución.
+            </p>
+            <p style={{ fontSize: 12, color: '#555', lineHeight: 1.6, marginBottom: 16 }}>
+              <strong>Datos SIGPAC:</strong> FEGA — Creative Commons BY 4.0.
+            </p>
+            <p style={{ fontSize: 12, color:
       <div className="app-body">
         <div style={{ position: 'relative', flex: 1 }}>
           <div id="map" ref={mapRef} style={{ height: '100%', width: '100%' }} />
