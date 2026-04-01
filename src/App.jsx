@@ -3,7 +3,7 @@ import L from 'leaflet'
 import '@geoman-io/leaflet-geoman-free'
 import '@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css'
 import { findNearest } from './utils/spatial.js'
-import { exportExcel } from './utils/export.js'
+import { exportExcel, exportExcelComparativo } from './utils/export.js'
 import ParamPanel from './components/ParamPanel.jsx'
 import GridControls from './components/GridControls.jsx'
 import SearchBox from './components/SearchBox.jsx'
@@ -427,7 +427,11 @@ parcelaActivaIdRef.current = parcelaActivaId
   })
   const handleExport = () => {
     if (!selected) return
-    exportExcel(selected.nearest, gridParam, sistema, parcelaActiva?.geojson || null)
+    if (parcelas.length > 1) {
+      exportExcelComparativo(parcelas, pointsRef.current, sistema)
+    } else {
+      exportExcel(selected.nearest, gridParam, sistema, parcelaActiva?.geojson || null)
+    }
   }
 
   return (
