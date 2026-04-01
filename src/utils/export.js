@@ -421,5 +421,54 @@ export function exportExcelComparativo(parcelas, allPoints, sistema = 'secano') 
   ws2['!cols'] = [{ wch: 28 }, { wch: 70 }]
   XLSX.utils.book_append_sheet(wb, ws2, 'Metadatos')
 
+  // ── Hoja 3: Recintos SIGPAC ──
+  if (window._sigpacRecintos && window._sigpacRecintos.length > 0) {
+    const sigpacHeader = [
+      'Provincia', 'Municipio', 'Poligono', 'Parcela', 'Recinto',
+      'Uso SIGPAC', 'Descripcion uso', 'Agricola',
+      'Superficie recinto (ha)', 'Sup. interseccion (ha)',
+      'Admisibilidad (%)', 'Coef. regadio (%)',
+      'Zona nitratos', 'Altitud media (m)', 'Incidencias',
+    ]
+    const poligono = window._sigpacPoligono || null
+    const sigpacRows = window._sigpacRecintos
+      .filter(r => {
+        if (!poligono || !r.wkt) return true
+        const calc = calcularInterseccion(poligono, r.wkt)
+        return calc !== null
+      })
+      .map(r => {
+        const supInterseccion = poligono && r.wkt
+          ? parseFloat(calcularInterseccion(poligono, r.wkt))
+          : '—'
+        return [
+          r.provincia    || '—',
+          r.municipio    || '—',
+          r.poligono     || '—',
+          r.parcela      || '—',
+          r.recinto      || '—',
+          r.uso          || '—',
+          r.usoDesc      || '—',
+          r.agricola     ? 'Si' : 'No',
+          r.superficie   || '—',
+          supInterseccion,
+          r.admisibilidad|| '—',
+          r.regadio      || '—',
+          r.nitratos     || '—',
+          r.altitud      || '—',
+          r.incidencias  || '—',
+        ]
+      })
+    const ws3 = XLSX.utils.aoa_to_sheet([sigpacHeader, ...sigpacRows])
+    ws3['!cols'] = [
+      { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 },
+      { wch: 8 },  { wch: 28 }, { wch: 10 },
+      { wch: 20 }, { wch: 20 }, { wch: 16 }, { wch: 16 },
+      { wch: 14 }, { wch: 16 }, { wch: 20 },
+    ]
+    XLSX.utils.book_append_sheet(wb, ws3, 'Recintos SIGPAC')
+  }
+
   XLSX.writeFile(wb, `LUCAS_comparativa_${new Date().toISOString().slice(0, 10)}.xlsx`)
+}
 }
