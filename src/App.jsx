@@ -589,7 +589,7 @@ parcelaActivaIdRef.current = parcelaActivaId
               </label>
               <select
                 value={parcelaActivaId || ''}
-                onChange={e => {                   const val = e.target.value                   setParcelaActivaId(val === 'todas' ? 'todas' : parseInt(val))                 }}
+                onChange={e => setParcelaActivaId(e.target.value === 'todas' ? 'todas' : parseInt(e.target.value))}
                 style={{ width: '100%', padding: '6px 8px', border: '1px solid #ddd', borderRadius: 4, fontSize: 13, background: '#fff' }}
               >
                 <option value="todas">Todas las parcelas</option>
