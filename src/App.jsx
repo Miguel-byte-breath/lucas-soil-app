@@ -130,6 +130,46 @@ export default function App() {
     })
 
     map.pm.setLang('es')
+    // Control personalizado — Eliminar parcela activa
+    map.pm.Toolbar.createCustomControl({
+      name: 'deleteActiva',
+      block: 'draw',
+      title: 'Eliminar parcela activa',
+      html: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>',
+      toggle: false,
+      onClick: () => {
+        const parcela = parcelasRef.current.find(p => p.id === parcelaActivaId)
+        if (parcela) {
+          mapObj.current.removeLayer(parcela.layer)
+          mapObj.current.pm.fire('pm:remove', { layer: parcela.layer })
+        }
+      },
+    })
+
+    // Control personalizado — Mi ubicación
+    map.pm.Toolbar.createCustomControl({
+      name: 'miUbicacion',
+      block: 'custom',
+      title: 'Mi ubicacion',
+      html: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8"/></svg>',
+      toggle: false,
+      onClick: () => {
+        if (!navigator.geolocation) return
+        navigator.geolocation.getCurrentPosition((pos) => {
+          const { latitude, longitude } = pos.coords
+          mapObj.current.setView([latitude, longitude], 14)
+          L.circleMarker([latitude, longitude], {
+            radius: 8,
+            color: '#1a3a2a',
+            fillColor: '#2d9d5c',
+            fillOpacity: 0.9,
+            weight: 2,
+          }).addTo(mapObj.current)
+            .bindPopup('Mi ubicacion')
+            .openPopup()
+        })
+      },
+    })
 
     map.on('mousemove', (e) => {
       const { lat, lng } = e.latlng
