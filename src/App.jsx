@@ -128,6 +128,7 @@ export default function App() {
       dragMode:       false,
       cutPolygon:     false,
       removalMode:    false,
+      rotateMode:     false,
     })
 
     map.pm.setLang('es')
