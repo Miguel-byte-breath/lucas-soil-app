@@ -430,7 +430,7 @@ parcelaActivaIdRef.current = parcelaActivaId
     }
   })
   const handleExport = () => {
-    if (parcelaActivaId === 'todas' || parcelas.length > 1) {
+    if (parcelaActivaId === 'todas') {
       exportExcelComparativo(parcelas, pointsRef.current, sistema)
     } else {
       if (!selected) return
