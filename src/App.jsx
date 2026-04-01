@@ -294,8 +294,7 @@ export default function App() {
       const lats = coords.map(c => c[1])
       const minLon = Math.min(...lons), maxLon = Math.max(...lons)
       const minLat = Math.min(...lats), maxLat = Math.max(...lats)
-      try {
-       try {
+     try {
         const features = await consultarBbox(minLon, minLat, maxLon, maxLat)
         const recintos = features.map(f => formatearRecinto(f))
         window._sigpacRecintos = recintos
@@ -308,7 +307,6 @@ export default function App() {
         window._sigpacRecintosPorParcela[id] = { recintos: [], geojson }
       }
     })
-
     map.on('pm:remove', (e) => {
       const id = Object.keys(labelLayers.current).find(k =>
         parcelasRef.current.find(p => p.id === parseInt(k) && p.layer === e.layer)
