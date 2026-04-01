@@ -126,7 +126,7 @@ export default function App() {
       editMode:       true,
       dragMode:       false,
       cutPolygon:     false,
-      removalMode:    true,
+      removalMode:    false,
     })
 
     map.pm.setLang('es')
@@ -473,6 +473,19 @@ const parcelaActiva = parcelas.find(p => p.id === parcelaActivaId) || null
                   <option key={p.id} value={p.id}>{p.nombre}</option>
                 ))}
               </select>
+              <button
+                onClick={() => {
+                  if (!parcelaActivaId) return
+                  const parcela = parcelasRef.current.find(p => p.id === parcelaActivaId)
+                  if (parcela) {
+                    mapObj.current.removeLayer(parcela.layer)
+                    mapObj.current.pm.fire('pm:remove', { layer: parcela.layer })
+                  }
+                }}
+                style={{ marginTop: 6, width: '100%', padding: '5px', background: '#f5f5f0', border: '1px solid #ddd', borderRadius: 4, fontSize: 12, cursor: 'pointer', color: '#c0392b' }}
+              >
+                Eliminar parcela activa
+              </button>
             </div>
           )}
 
