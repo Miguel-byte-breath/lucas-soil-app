@@ -51,6 +51,7 @@ export default function App() {
   const labelLayers   = useRef({})
   const gridLayers    = useRef({})
   const parcelaCount  = useRef(0)
+  const parcelaActivaIdRef = useRef(null)
   const [points,       setPoints]       = useState([])
   const [selected,     setSelected]     = useState(null)
   const [gridParam,    setGridParam]    = useState('iva')
@@ -138,10 +139,29 @@ export default function App() {
       html: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>',
       toggle: false,
       onClick: () => {
-        const parcela = parcelasRef.current.find(p => p.id === parcelaActivaId)
-        if (parcela) {
-          mapObj.current.removeLayer(parcela.layer)
-          mapObj.current.pm.fire('pm:remove', { layer: parcela.layer })
+        const id = parcelaActivaIdRef.current
+        if (!id) return
+        const parcela = parcelasRef.current.find(p => p.id === id)
+        if (!parcela) return
+        mapObj.current.removeLayer(parcela.layer)
+        if (labelLayers.current[id]) {
+          mapObj.current.removeLayer(labelLayers.current[id])
+          delete labelLayers.current[id]
+        }
+        if (gridLayers.current[id]) {
+          mapObj.current.removeLayer(gridLayers.current[id])
+          delete gridLayers.current[id]
+        }
+        parcelasRef.current = parcelasRef.current.filter(p => p.id !== id)
+        setParcelas([...parcelasRef.current])
+        if (parcelasRef.current.length > 0) {
+          setParcelaActivaId(parcelasRef.current[parcelasRef.current.length - 1].id)
+        } else {
+          setParcelaActivaId(null)
+          setSelected(null)
+          setSigpacData(null)
+          window._sigpacPoligono = null
+          window._sigpacRecintos = []
         }
       },
     })
@@ -344,7 +364,7 @@ export default function App() {
   }, [parcelaActivaId, gridParam, points, sistema])
 
 const parcelaActiva = parcelas.find(p => p.id === parcelaActivaId) || null
-
+parcelaActivaIdRef.current = parcelaActivaId
   const handleExport = () => {
     if (!selected) return
     exportExcel(selected.nearest, gridParam, sistema, parcelaActiva?.geojson || null)
@@ -514,12 +534,30 @@ const parcelaActiva = parcelas.find(p => p.id === parcelaActivaId) || null
                 ))}
               </select>
               <button
-                onClick={() => {
+               onClick={() => {
                   if (!parcelaActivaId) return
-                  const parcela = parcelasRef.current.find(p => p.id === parcelaActivaId)
-                  if (parcela) {
-                    mapObj.current.removeLayer(parcela.layer)
-                    mapObj.current.pm.fire('pm:remove', { layer: parcela.layer })
+                  const id = parcelaActivaId
+                  const parcela = parcelasRef.current.find(p => p.id === id)
+                  if (!parcela) return
+                  mapObj.current.removeLayer(parcela.layer)
+                  if (labelLayers.current[id]) {
+                    mapObj.current.removeLayer(labelLayers.current[id])
+                    delete labelLayers.current[id]
+                  }
+                  if (gridLayers.current[id]) {
+                    mapObj.current.removeLayer(gridLayers.current[id])
+                    delete gridLayers.current[id]
+                  }
+                  parcelasRef.current = parcelasRef.current.filter(p => p.id !== id)
+                  setParcelas([...parcelasRef.current])
+                  if (parcelasRef.current.length > 0) {
+                    setParcelaActivaId(parcelasRef.current[parcelasRef.current.length - 1].id)
+                  } else {
+                    setParcelaActivaId(null)
+                    setSelected(null)
+                    setSigpacData(null)
+                    window._sigpacPoligono = null
+                    window._sigpacRecintos = []
                   }
                 }}
                 style={{ marginTop: 6, width: '100%', padding: '5px', background: '#f5f5f0', border: '1px solid #ddd', borderRadius: 4, fontSize: 12, cursor: 'pointer', color: '#c0392b' }}
