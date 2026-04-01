@@ -66,7 +66,7 @@ export function exportExcel(neighbors, gridParam, sistema = 'secano', polygon = 
   XLSX.utils.book_append_sheet(wb, ws1, 'Puntos vecinos')
 
   // ── Hoja 2: Estadísticas del entorno ──
-  const numParams = ['pH','MOS','OC','N','P','K','CaCO3','clay','sand','silt','bd']
+  const numParams = ['pH','pH_w','MOS','OC','N','P','K','CaCO3','clay','sand','silt','bd']
   const statsHeader = ['Parámetro', 'n', 'Media', 'Mín', 'Máx', 'Nota']
   const statsRows = numParams.map(p => {
     const vals = neighbors
