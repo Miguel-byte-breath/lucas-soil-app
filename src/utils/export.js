@@ -330,7 +330,9 @@ export async function exportShapefile(neighbors, polygon) {
   a.download = `LUCAS_geometrias_${new Date().toISOString().slice(0, 10)}.zip`
   a.click()
   URL.revokeObjectURL(url)
-  export function exportExcelComparativo(parcelas, allPoints, sistema = 'secano') {
+}
+
+export function exportExcelComparativo(parcelas, allPoints, sistema = 'secano') {
   const wb = XLSX.utils.book_new()
 
   // Calcular IVA y datos por parcela
