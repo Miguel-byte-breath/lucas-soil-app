@@ -416,6 +416,15 @@ export default function App() {
 const parcelaActiva = parcelas.find(p => p.id === parcelaActivaId) || null
 parcelaActivaIdRef.current = parcelaActivaId
   window._parcelaActivaId = parcelaActivaId
+  // Resaltar polígono activo
+  parcelasRef.current.forEach(p => {
+    if (p.layer) {
+      p.layer.setStyle(p.id === parcelaActivaId
+        ? { color: '#f0a500', weight: 3, fillOpacity: 0.15 }
+        : { color: '#3388ff', weight: 2, fillOpacity: 0.1 }
+      )
+    }
+  })
   const handleExport = () => {
     if (!selected) return
     exportExcel(selected.nearest, gridParam, sistema, parcelaActiva?.geojson || null)
