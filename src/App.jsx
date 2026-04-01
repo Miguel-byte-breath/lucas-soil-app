@@ -426,14 +426,13 @@ parcelaActivaIdRef.current = parcelaActivaId
     }
   })
   const handleExport = () => {
-    if (!selected) return
-    if (parcelas.length > 1) {
+    if (parcelaActivaId === 'todas' || parcelas.length > 1) {
       exportExcelComparativo(parcelas, pointsRef.current, sistema)
     } else {
+      if (!selected) return
       exportExcel(selected.nearest, gridParam, sistema, parcelaActiva?.geojson || null)
     }
   }
-
   return (
     <>
       <header className="app-header">
@@ -590,12 +589,13 @@ parcelaActivaIdRef.current = parcelaActivaId
               </label>
               <select
                 value={parcelaActivaId || ''}
-                onChange={e => setParcelaActivaId(parseInt(e.target.value))}
+                onChange={e => {                   const val = e.target.value                   setParcelaActivaId(val === 'todas' ? 'todas' : parseInt(val))                 }}
                 style={{ width: '100%', padding: '6px 8px', border: '1px solid #ddd', borderRadius: 4, fontSize: 13, background: '#fff' }}
               >
-                {parcelas.map(p => (
-                  <option key={p.id} value={p.id}>{p.nombre}</option>
-                ))}
+                <option value="todas">Todas las parcelas</option>
+              {parcelas.map(p => (
+                <option key={p.id} value={p.id}>{p.nombre}</option>
+              ))}
               </select>
               <button
                onClick={() => {
