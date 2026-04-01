@@ -295,11 +295,17 @@ export default function App() {
       const minLon = Math.min(...lons), maxLon = Math.max(...lons)
       const minLat = Math.min(...lats), maxLat = Math.max(...lats)
       try {
+       try {
         const features = await consultarBbox(minLon, minLat, maxLon, maxLat)
-        window._sigpacRecintos = features.map(f => formatearRecinto(f))
+        const recintos = features.map(f => formatearRecinto(f))
+        window._sigpacRecintos = recintos
         window._sigpacPoligono = geojson
+        if (!window._sigpacRecintosPorParcela) window._sigpacRecintosPorParcela = {}
+        window._sigpacRecintosPorParcela[id] = { recintos, geojson }
       } catch {
         window._sigpacRecintos = []
+        if (!window._sigpacRecintosPorParcela) window._sigpacRecintosPorParcela = {}
+        window._sigpacRecintosPorParcela[id] = { recintos: [], geojson }
       }
     })
 
