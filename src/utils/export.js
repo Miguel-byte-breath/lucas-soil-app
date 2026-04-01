@@ -330,4 +330,95 @@ export async function exportShapefile(neighbors, polygon) {
   a.download = `LUCAS_geometrias_${new Date().toISOString().slice(0, 10)}.zip`
   a.click()
   URL.revokeObjectURL(url)
+  export function exportExcelComparativo(parcelas, allPoints, sistema = 'secano') {
+  const wb = XLSX.utils.book_new()
+
+  // Calcular IVA y datos por parcela
+  const datosParcelas = parcelas.map(parcela => {
+    const coords = parcela.geojson.geometry.coordinates[0]
+    const centLat = coords.reduce((s, c) => s + c[1], 0) / coords.length
+    const centLon = coords.reduce((s, c) => s + c[0], 0) / coords.length
+    const neighbors = allPoints
+      .map(pt => ({ ...pt, _d: Math.sqrt((pt.lat - centLat) ** 2 + (pt.lon - centLon) ** 2) }))
+      .sort((a, b) => a._d - b._d)
+      .slice(0, 8)
+    const synth = {
+      pH_w: idw(centLat, centLon, neighbors.filter(p => p.pH_w != null), 'pH_w'),
+      MOS:  idw(centLat, centLon, neighbors.filter(p => p.MOS  != null), 'MOS'),
+      P:    idw(centLat, centLon, neighbors.filter(p => p.P    != null), 'P'),
+      K:    idw(centLat, centLon, neighbors.filter(p => p.K    != null), 'K'),
+      usda: neighbors[0]?.usda || 'loam',
+    }
+    const { indice, clases } = indiceAgronomico(synth, sistema)
+    return { parcela, synth, indice, clases, centLat, centLon }
+  })
+
+  // ── Hoja 1: Comparativa IVA ──
+  const colHeaders = ['Parametro', ...parcelas.map(p => p.nombre)]
+  if (parcelas.length === 2) {
+    colHeaders.push('Diferencia', 'Interpretacion RD 1051/2022')
+  }
+
+  const params = [
+    { label: 'IVA (0-100)',        key: d => d.indice ?? '—' },
+    { label: 'Categoria IVA',      key: d => d.indice == null ? '—' : d.indice >= 80 ? 'Muy buena aptitud' : d.indice >= 60 ? 'Buena aptitud' : d.indice >= 40 ? 'Aptitud moderada' : d.indice >= 20 ? 'Limitaciones importantes' : 'Limitaciones severas' },
+    { label: 'pH (H2O)',           key: d => d.synth.pH_w ?? '—' },
+    { label: 'pH score/5',         key: d => d.clases.pH?.score ?? '—' },
+    { label: 'pH categoria',       key: d => d.clases.pH?.label ?? '—' },
+    { label: 'Textura USDA',       key: d => d.synth.usda ?? '—' },
+    { label: 'Textura score/5',    key: d => d.clases.textura?.score ?? '—' },
+    { label: 'MOS (%)',            key: d => d.synth.MOS ?? '—' },
+    { label: 'MOS score/5',        key: d => d.clases.MOS?.score ?? '—' },
+    { label: 'MOS categoria',      key: d => d.clases.MOS?.label ?? '—' },
+    { label: 'P (mg/kg)',          key: d => d.synth.P ?? '—' },
+    { label: 'P score/5',          key: d => d.clases.P?.score ?? '—' },
+    { label: 'P categoria',        key: d => d.clases.P?.label ?? '—' },
+    { label: 'K (mg/kg)',          key: d => d.synth.K ?? '—' },
+    { label: 'K score/5',          key: d => d.clases.K?.score ?? '—' },
+    { label: 'K categoria',        key: d => d.clases.K?.label ?? '—' },
+    { label: 'Centroide Lat',      key: d => d.centLat },
+    { label: 'Centroide Lon',      key: d => d.centLon },
+  ]
+
+  const compRows = params.map(p => {
+    const row = [p.label, ...datosParcelas.map(d => p.key(d))]
+    if (parcelas.length === 2) {
+      const v1 = datosParcelas[0].indice
+      const v2 = datosParcelas[1].indice
+      if (p.label === 'IVA (0-100)' && v1 != null && v2 != null) {
+        const diff = Math.abs(v1 - v2)
+        const interp = diff < 10
+          ? 'Mismo plan de abonado justificado'
+          : diff <= 20
+          ? 'Un plan con observaciones diferenciadas'
+          : 'Planes independientes recomendados'
+        row.push(diff, interp)
+      } else {
+        row.push('', '')
+      }
+    }
+    return row
+  })
+
+  const ws1 = XLSX.utils.aoa_to_sheet([colHeaders, ...compRows])
+  ws1['!cols'] = colHeaders.map((_, i) => ({ wch: i === 0 ? 28 : i === colHeaders.length - 1 ? 40 : 18 }))
+  XLSX.utils.book_append_sheet(wb, ws1, 'Comparativa parcelas')
+
+  // ── Hoja 2: Metadatos ──
+  const meta = [
+    ['Fuente de datos', 'LUCAS Soil 2018 — Joint Research Centre (JRC), Comision Europea'],
+    ['MOS', 'Calculado como OC x 1,724 (coeficiente de Waksman)'],
+    ['CRS', 'EPSG:4326 — WGS84'],
+    ['Nota orientativa', 'Densidad media LUCAS ~1 punto/18 km2. Datos de referencia, no de precision parcelaria.'],
+    ['Marco normativo', 'RD 1051/2022 — Nutricion sostenible de suelos agrarios'],
+    ['Generado con', 'LUCAS Soil Explorer — VisualNACert'],
+    ['Licencia datos SIGPAC', 'FEGA — Creative Commons BY 4.0. https://www.fega.gob.es'],
+    ['Fecha exportacion', new Date().toLocaleDateString('es-ES')],
+  ]
+  const ws2 = XLSX.utils.aoa_to_sheet(meta)
+  ws2['!cols'] = [{ wch: 28 }, { wch: 70 }]
+  XLSX.utils.book_append_sheet(wb, ws2, 'Metadatos')
+
+  XLSX.writeFile(wb, `LUCAS_comparativa_${new Date().toISOString().slice(0, 10)}.xlsx`)
+}
 }
