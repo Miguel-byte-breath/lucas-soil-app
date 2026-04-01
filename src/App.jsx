@@ -167,7 +167,22 @@ export default function App() {
         }
       },
     })
-
+    
+// Inyectar iconos CSS en botones geoman personalizados
+    setTimeout(() => {
+      const btns = document.querySelectorAll('.leaflet-pm-toolbar .leaflet-buttons-control-button')
+      btns.forEach(btn => {
+        const title = btn.getAttribute('title')
+        const icon = btn.querySelector('.control-icon')
+        if (!icon) return
+        if (title === 'Eliminar parcela activa') {
+          icon.style.backgroundImage = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23555' stroke-width='2'%3E%3Cpolyline points='3 6 5 6 21 6'/%3E%3Cpath d='M19 6l-1 14H6L5 6'/%3E%3Cpath d='M10 11v6M14 11v6'/%3E%3Cpath d='M9 6V4h6v2'/%3E%3C/svg%3E\")"
+        }
+        if (title === 'Mi ubicacion') {
+          icon.style.backgroundImage = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23555' stroke-width='2'%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3Cpath d='M12 2v4M12 18v4M2 12h4M18 12h4'/%3E%3C/svg%3E\")"
+        }
+      })
+    }, 500)
     // Control personalizado — Mi ubicación
     map.pm.Toolbar.createCustomControl({
       name: 'miUbicacion',
@@ -193,7 +208,21 @@ export default function App() {
         })
       },
     })
-
+// Inyectar iconos CSS en botones geoman personalizados
+    setTimeout(() => {
+      const btns = document.querySelectorAll('.leaflet-pm-toolbar .leaflet-buttons-control-button')
+      btns.forEach(btn => {
+        const title = btn.getAttribute('title')
+        const icon = btn.querySelector('.control-icon')
+        if (!icon) return
+        if (title === 'Eliminar parcela activa') {
+          icon.style.backgroundImage = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23555' stroke-width='2'%3E%3Cpolyline points='3 6 5 6 21 6'/%3E%3Cpath d='M19 6l-1 14H6L5 6'/%3E%3Cpath d='M10 11v6M14 11v6'/%3E%3Cpath d='M9 6V4h6v2'/%3E%3C/svg%3E\")"
+        }
+        if (title === 'Mi ubicacion') {
+          icon.style.backgroundImage = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23555' stroke-width='2'%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3Cpath d='M12 2v4M12 18v4M2 12h4M18 12h4'/%3E%3C/svg%3E\")"
+        }
+      })
+    }, 500)
     map.on('mousemove', (e) => {
       const { lat, lng } = e.latlng
       setCoords({ lat: lat.toFixed(5), lng: lng.toFixed(5) })
