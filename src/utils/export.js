@@ -79,7 +79,7 @@ export function exportExcel(neighbors, gridParam, sistema = 'secano', polygon = 
       : p === 'bd' && vals.length < neighbors.length
       ? `BD disponible en ${vals.length} de ${neighbors.length} puntos`
       : ''
-   return [
+    return [
       PARAM_LABELS[p] || p,
       vals.length,
       Math.round(mean * 100) / 100,
@@ -133,13 +133,59 @@ export function exportExcel(neighbors, gridParam, sistema = 'secano', polygon = 
   const ws3 = XLSX.utils.aoa_to_sheet(meta)
   ws3['!cols'] = [{ wch: 28 }, { wch: 70 }]
   XLSX.utils.book_append_sheet(wb, ws3, 'Metadatos')
-  
+
   // ── Hoja 4: Recintos SIGPAC ──
   if (window._sigpacRecintos && window._sigpacRecintos.length > 0) {
-  
+    const sigpacHeader = [
+      'Provincia', 'Municipio', 'Polígono', 'Parcela', 'Recinto',
+      'Uso SIGPAC', 'Descripción uso', 'Agrícola',
+      'Superficie recinto (ha)', 'Sup. intersección (ha)',
+      'Admisibilidad (%)', 'Coef. regadío (%)',
+      'Zona nitratos', 'Altitud media (m)', 'Incidencias',
+    ]
+    const poligono = window._sigpacPoligono || null
+    const sigpacRows = window._sigpacRecintos
+      .filter(r => {
+        if (!poligono || !r.wkt) return true
+        const calc = calcularInterseccion(poligono, r.wkt)
+        return calc !== null
+      })
+      .map(r => {
+        const supInterseccion = poligono && r.wkt
+          ? parseFloat(calcularInterseccion(poligono, r.wkt))
+          : '—'
+        return [
+          r.provincia    || '—',
+          r.municipio    || '—',
+          r.poligono     || '—',
+          r.parcela      || '—',
+          r.recinto      || '—',
+          r.uso          || '—',
+          r.usoDesc      || '—',
+          r.agricola     ? 'Sí' : 'No',
+          r.superficie   || '—',
+          supInterseccion,
+          r.admisibilidad|| '—',
+          r.regadio      || '—',
+          r.nitratos     || '—',
+          r.altitud      || '—',
+          r.incidencias  || '—',
+        ]
+      })
+    const ws4 = XLSX.utils.aoa_to_sheet([sigpacHeader, ...sigpacRows])
+    ws4['!cols'] = [
+      { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 },
+      { wch: 8 },  { wch: 28 }, { wch: 10 },
+      { wch: 20 }, { wch: 20 }, { wch: 16 }, { wch: 16 },
+      { wch: 14 }, { wch: 16 }, { wch: 20 },
+    ]
+    XLSX.utils.book_append_sheet(wb, ws4, 'Recintos SIGPAC')
+  }
+
   // Descargar
   XLSX.writeFile(wb, `LUCAS_suelo_${new Date().toISOString().slice(0,10)}.xlsx`)
 }
+
 export function exportGeoJSON(neighbors, polygon) {
   const features = []
 
@@ -210,7 +256,6 @@ export function exportGeoJSON(neighbors, polygon) {
 }
 
 export async function exportShapefile(neighbors, polygon) {
-  // Generamos dos GeoJSON separados y los descargamos como .zip usando JSZip
   const { default: JSZip } = await import('jszip')
 
   const pointFeatures = neighbors.map((pt, i) => ({
@@ -440,54 +485,6 @@ export function exportExcelComparativo(parcelas, allPoints, sistema = 'secano') 
     const ws4 = XLSX.utils.aoa_to_sheet([sigpacHeader, ...sigpacRows])
     ws4['!cols'] = sigpacHeader.map((_, i) => ({ wch: i === 6 ? 28 : 14 }))
     XLSX.utils.book_append_sheet(wb, ws4, 'Recintos SIGPAC')
-  }
-
-  XLSX.writeFile(wb, `LUCAS_comparativa_${new Date().toISOString().slice(0, 10)}.xlsx`)
-}
-    const sigpacHeader = [
-      'Provincia', 'Municipio', 'Poligono', 'Parcela', 'Recinto',
-      'Uso SIGPAC', 'Descripcion uso', 'Agricola',
-      'Superficie recinto (ha)', 'Sup. interseccion (ha)',
-      'Admisibilidad (%)', 'Coef. regadio (%)',
-      'Zona nitratos', 'Altitud media (m)', 'Incidencias',
-    ]
-    const poligono = window._sigpacPoligono || null
-    const sigpacRows = window._sigpacRecintos
-      .filter(r => {
-        if (!poligono || !r.wkt) return true
-        const calc = calcularInterseccion(poligono, r.wkt)
-        return calc !== null
-      })
-      .map(r => {
-        const supInterseccion = poligono && r.wkt
-          ? parseFloat(calcularInterseccion(poligono, r.wkt))
-          : '—'
-        return [
-          r.provincia    || '—',
-          r.municipio    || '—',
-          r.poligono     || '—',
-          r.parcela      || '—',
-          r.recinto      || '—',
-          r.uso          || '—',
-          r.usoDesc      || '—',
-          r.agricola     ? 'Si' : 'No',
-          r.superficie   || '—',
-          supInterseccion,
-          r.admisibilidad|| '—',
-          r.regadio      || '—',
-          r.nitratos     || '—',
-          r.altitud      || '—',
-          r.incidencias  || '—',
-        ]
-      })
-    const ws3 = XLSX.utils.aoa_to_sheet([sigpacHeader, ...sigpacRows])
-    ws3['!cols'] = [
-      { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 },
-      { wch: 8 },  { wch: 28 }, { wch: 10 },
-      { wch: 20 }, { wch: 20 }, { wch: 16 }, { wch: 16 },
-      { wch: 14 }, { wch: 16 }, { wch: 20 },
-    ]
-    XLSX.utils.book_append_sheet(wb, ws3, 'Recintos SIGPAC')
   }
 
   XLSX.writeFile(wb, `LUCAS_comparativa_${new Date().toISOString().slice(0, 10)}.xlsx`)
