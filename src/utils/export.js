@@ -421,8 +421,76 @@ export function exportExcelComparativo(parcelas, allPoints, sistema = 'secano') 
   ws2['!cols'] = [{ wch: 28 }, { wch: 70 }]
   XLSX.utils.book_append_sheet(wb, ws2, 'Metadatos')
 
-  // ── Hoja 3: Recintos SIGPAC ──
+  // ── Hoja 3: Puntos vecinos LUCAS por parcela ──
+  const lucasHeader = ['Parcela', 'Rank', 'POINTID', 'Lat', 'Lon', 'Dist (km)', 'pH (H2O)', 'MOS (%)', 'OC (g/kg)', 'N (g/kg)', 'P (mg/kg)', 'K (mg/kg)', 'CaCO3 (%)', 'Arcilla (%)', 'Arena (%)', 'Limo (%)', 'Textura USDA', 'BD (g/cm3)', 'IVA', 'Categoria IVA']
+  const lucasRows = []
+  datosParcelas.forEach(({ parcela }) => {
+    const coords = parcela.geojson.geometry.coordinates[0]
+    const centLat = coords.reduce((s, c) => s + c[1], 0) / coords.length
+    const centLon = coords.reduce((s, c) => s + c[0], 0) / coords.length
+    const neighbors = allPoints
+      .map(pt => ({ ...pt, _d: Math.sqrt((pt.lat - centLat) ** 2 + (pt.lon - centLon) ** 2) }))
+      .sort((a, b) => a._d - b._d)
+      .slice(0, 5)
+    neighbors.forEach((pt, i) => {
+      const { indice } = indiceAgronomico(pt, sistema)
+      const catIva = indice == null ? '—' : indice >= 80 ? 'Muy buena aptitud' : indice >= 60 ? 'Buena aptitud' : indice >= 40 ? 'Aptitud moderada' : indice >= 20 ? 'Limitaciones importantes' : 'Limitaciones severas'
+      lucasRows.push([
+        parcela.nombre, i + 1, pt.id, pt.lat, pt.lon,
+        Math.round(pt._d * 111 * 10) / 10,
+        pt.pH_w ?? '—', pt.MOS ?? '—', pt.OC ?? '—', pt.N ?? '—',
+        pt.P ?? '—', pt.K ?? '—', pt.CaCO3 ?? '—',
+        pt.clay ?? '—', pt.sand ?? '—', pt.silt ?? '—',
+        pt.usda ?? '—', pt.bd ?? '—',
+        indice ?? '—', catIva,
+      ])
+    })
+  })
+  const ws3 = XLSX.utils.aoa_to_sheet([lucasHeader, ...lucasRows])
+  ws3['!cols'] = lucasHeader.map(() => ({ wch: 16 }))
+  XLSX.utils.book_append_sheet(wb, ws3, 'Puntos vecinos LUCAS')
+
+  // ── Hoja 4: Recintos SIGPAC por parcela ──
   if (window._sigpacRecintos && window._sigpacRecintos.length > 0) {
+    const sigpacHeader = [
+      'Parcela', 'Provincia', 'Municipio', 'Poligono', 'Recinto',
+      'Uso SIGPAC', 'Descripcion uso', 'Agricola',
+      'Superficie (ha)', 'Sup. interseccion (ha)',
+      'Admisibilidad (%)', 'Coef. regadio (%)',
+      'Zona nitratos', 'Altitud (m)', 'Incidencias',
+    ]
+    const sigpacRows = []
+    datosParcelas.forEach(({ parcela }) => {
+      const poligono = parcela.geojson
+      window._sigpacRecintos
+        .filter(r => {
+          if (!poligono || !r.wkt) return true
+          return calcularInterseccion(poligono, r.wkt) !== null
+        })
+        .forEach(r => {
+          const supInterseccion = poligono && r.wkt
+            ? parseFloat(calcularInterseccion(poligono, r.wkt))
+            : '—'
+          sigpacRows.push([
+            parcela.nombre,
+            r.provincia || '—', r.municipio || '—',
+            r.poligono || '—', r.recinto || '—',
+            r.uso || '—', r.usoDesc || '—',
+            r.agricola ? 'Si' : 'No',
+            r.superficie || '—', supInterseccion,
+            r.admisibilidad || '—', r.regadio || '—',
+            r.nitratos || '—', r.altitud || '—',
+            r.incidencias || '—',
+          ])
+        })
+    })
+    const ws4 = XLSX.utils.aoa_to_sheet([sigpacHeader, ...sigpacRows])
+    ws4['!cols'] = sigpacHeader.map((_, i) => ({ wch: i === 6 ? 28 : 14 }))
+    XLSX.utils.book_append_sheet(wb, ws4, 'Recintos SIGPAC')
+  }
+
+  XLSX.writeFile(wb, `LUCAS_comparativa_${new Date().toISOString().slice(0, 10)}.xlsx`)
+}
     const sigpacHeader = [
       'Provincia', 'Municipio', 'Poligono', 'Parcela', 'Recinto',
       'Uso SIGPAC', 'Descripcion uso', 'Agricola',
