@@ -136,7 +136,7 @@ export default function App() {
       name: 'deleteActiva',
       block: 'draw',
       title: 'Eliminar parcela activa',
-      html: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>',
+      html: '🗑',
       toggle: false,
       onClick: () => {
         const id = parcelaActivaIdRef.current
@@ -171,7 +171,7 @@ export default function App() {
       name: 'miUbicacion',
       block: 'custom',
       title: 'Mi ubicacion',
-      html: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8"/></svg>',
+      html: '⊕',
       toggle: false,
       onClick: () => {
         if (!navigator.geolocation) return
