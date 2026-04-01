@@ -256,8 +256,15 @@ export default function App() {
       gridLayers.current[id] = gLayer
 
       // Clic en polígono → activar parcela
-      e.layer.on('click', () => {
+      e.layer.on('click', (e) => {
+        L.DomEvent.stopPropagation(e)
         setParcelaActivaId(id)
+        parcelaActivaIdRef.current = id
+        const parcela = parcelasRef.current.find(p => p.id === id)
+        if (parcela && pointsRef.current.length) {
+          const nearest = findNearest({ lat: parcela.centLat, lng: parcela.centLon }, pointsRef.current, 5)
+          setSelected({ clicked: nearest[0], nearest })
+        }
       })
 
       const nuevaParcela = { id, nombre, geojson, layer: e.layer, centLat, centLon }
