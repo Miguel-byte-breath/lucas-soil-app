@@ -398,6 +398,7 @@ export default function App() {
 
 const parcelaActiva = parcelas.find(p => p.id === parcelaActivaId) || null
 parcelaActivaIdRef.current = parcelaActivaId
+  window._parcelaActivaId = parcelaActivaId
   const handleExport = () => {
     if (!selected) return
     exportExcel(selected.nearest, gridParam, sistema, parcelaActiva?.geojson || null)
