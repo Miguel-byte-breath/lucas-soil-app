@@ -170,7 +170,7 @@ export default function App() {
     
 // Inyectar iconos CSS en botones geoman personalizados
     setTimeout(() => {
-      const btns = document.querySelectorAll('.leaflet-pm-toolbar .leaflet-buttons-control-button')
+      const btns = document.querySelectorAll('.leaflet-pm-toolbar .button-container')
       btns.forEach(btn => {
         const title = btn.getAttribute('title')
         const icon = btn.querySelector('.control-icon')
