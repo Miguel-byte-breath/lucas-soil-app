@@ -458,9 +458,11 @@ export function exportExcelComparativo(parcelas, allPoints, sistema = 'secano') 
       'Zona nitratos', 'Altitud (m)', 'Incidencias',
     ]
     const sigpacRows = []
-    datosParcelas.forEach(({ parcela }) => {
-      const poligono = parcela.geojson
-      window._sigpacRecintos
+   datosParcelas.forEach(({ parcela }) => {
+      const datosSigpac = window._sigpacRecintosPorParcela?.[parcela.id]
+      const poligono = datosSigpac?.geojson || parcela.geojson
+      const recintos = datosSigpac?.recintos || []
+      recintos
         .filter(r => {
           if (!poligono || !r.wkt) return true
           return calcularInterseccion(poligono, r.wkt) !== null
