@@ -21,7 +21,7 @@ El objetivo principal es proporcionar una **unidad edáfica de referencia** cohe
 | Componente | Tecnología |
 |---|---|
 | Frontend | React + Vite |
-| Mapa | Leaflet + Leaflet-Draw |
+| Mapa | Leaflet + @geoman-io/leaflet-geoman-free |
 | Datos suelo | JSON estático (lucas_spain.json, 1.35 MB) |
 | Geometría | @turf/turf |
 | Exportación | SheetJS (Excel), JSZip (GeoJSON/ZIP) |
@@ -68,7 +68,7 @@ lucas-soil-app/
 - **Puntos España:** 3.867 (de 18.984 totales Europa)
 - **Campos por punto:** 26 (id, lat, lon, pH, pH_w, OC, MOS, N, P, K, CaCO3, EC, clay, sand, silt, coarse, usda, bd, bd10, nuts1, nuts2, lc, lu, elev, date, P_lod)
 - **CRS:** EPSG:4326 WGS84
-- **MOS:** calculado como OC × 1,724 (coeficiente de Waksman)
+- **MOS:** calculado como OC (g/kg) ÷ 10 × 1,724 (coeficiente de Waksman) → resultado en %
 - **P < LOD:** tratado como 5,0 mg/kg centinela con flag P_lod=true
 - **pH usado para baremación:** pH_w (H₂O)
 - **Textura:** LUCAS Texture All 2018 (clasificación USDA)
@@ -98,6 +98,7 @@ Contacto técnico datos LUCAS: ec-esdac@ec.europa.eu
 - 3.867 puntos LUCAS como marcadores clicables
 - Escala métrica y coordenadas en tiempo real (EPSG:4326)
 - Buscador de municipio con Nominatim + fallback CartoCiudad (IGN)
+- Botón de geolocalización (mi ubicación)
 
 ### Clic en mapa / punto LUCAS
 - Identificación del punto LUCAS más cercano (Haversine)
@@ -105,12 +106,15 @@ Contacto técnico datos LUCAS: ec-esdac@ec.europa.eu
 - Consulta automática SIGPAC al punto clicado
 - Panel SIGPAC: uso, referencia catastral, superficie, admisibilidad, zona nitratos, coef. regadío, altitud, incidencias
 
-### Dibujo de polígono (parcela)
+### Dibujo de parcelas (múltiples polígonos)
+- Soporte para múltiples parcelas simultáneas — cada una etiquetada en el mapa
+- Selección de parcela activa por clic en el mapa o por dropdown en el panel
+- Resaltado visual del polígono activo (naranja) vs resto (azul)
+- Botón de eliminar parcela activa en barra de herramientas y en panel
 - Grid parcelario con clasificación agronómica por parámetro
 - Tamaño celda mínimo compatible SIEX (≥ 100×100 m)
 - Toggle Secano / Regadío que afecta a la baremación de MOS, P y K
-- Leyenda con categorías y número de celdas
-- Consulta automática de recintos SIGPAC en el bbox del polígono
+- Consulta automática de recintos SIGPAC por parcela
 - Intersección geométrica turf.js con cada recinto SIGPAC
 
 ### Raster agronómico continuo
@@ -121,17 +125,40 @@ Contacto técnico datos LUCAS: ec-esdac@ec.europa.eu
 - Interpolación IDW sobre los 8 puntos LUCAS más cercanos (radio máx. 120 km)
 
 ### Exportación
-- **Excel (4 hojas):**
+- **Excel parcela individual (4 hojas):**
   1. Puntos vecinos: 5 puntos LUCAS con todos los atributos + IVA individual y scores por variable
   2. Estadísticas del entorno: media, mín, máx por parámetro + IVA IDW del centroide desglosado
   3. Metadatos: fuente, metodología, aviso legal
   4. Recintos SIGPAC: recintos intersectados con superficie de intersección
+- **Excel comparativo parcelas (4 hojas):** se genera al seleccionar "Todas las parcelas"
+  1. Comparativa IVA: parámetros por columna de parcela + diferencia + interpretación RD 1051/2022
+  2. Metadatos
+  3. Puntos vecinos LUCAS por parcela
+  4. Recintos SIGPAC por parcela
 - **GeoJSON:** puntos LUCAS + polígono dibujado
 - **Shapefile ZIP:** mismo contenido en GeoJSON dentro de ZIP con README
 
 ---
 
 ## Marco agronómico — Baremación y IVA
+
+### Calidad del dato — IDW vs media de vecinos
+
+Los outputs de la aplicación utilizan dos metodologías complementarias que responden a preguntas distintas:
+
+**Media de los 5 vecinos LUCAS** (Excel individual):
+- Muestra los puntos LUCAS reales medidos más próximos a la parcela
+- Incluye el rango mín/máx — información valiosa sobre la variabilidad del entorno
+- Totalmente trazable: el agrónomo puede verificar cada punto en la fuente JRC
+- Limitación: la media no pondera por distancia
+
+**Interpolación IDW en el centroide** (IVA, Excel comparativo):
+- Pondera por distancia inversa — los puntos más cercanos pesan más
+- Geográficamente más preciso para la localización exacta de la parcela
+- Más adecuado para comparar dos parcelas en localizaciones diferentes
+- Limitación: es un valor sintético interpolado, no un dato real medido
+
+> Los valores IDW representan una estimación interpolada por distancia inversa en el centroide de la parcela. Los puntos LUCAS vecinos son los datos reales medidos más próximos. Ambas metodologías son complementarias y coherentes con la densidad de muestreo LUCAS (~1 punto/18 km²).
 
 ### IVA — Índice de Variabilidad Agronómica (0–100)
 
@@ -143,8 +170,6 @@ El IVA es un índice compuesto que mide la aptitud agronómica del entorno edáf
 IVA = Σ (score_i / 5 × peso_i) / Σ peso_i × 100
 ```
 
-Los pesos se redistribuyen proporcionalmente si algún parámetro no tiene dato disponible.
-
 **Pesos definitivos:**
 
 | Parámetro | Peso |
@@ -155,7 +180,7 @@ Los pesos se redistribuyen proporcionalmente si algún parámetro no tiene dato 
 | P | 15% |
 | K | 15% |
 
-> N total y BD se muestran como datos informativos pero no entran en el IVA. La BD tiene cobertura del ~34% en España y el N es un indicador indirecto de mineralización, no de disponibilidad inmediata.
+> N total y BD se muestran como datos informativos pero no entran en el IVA.
 
 **Categorías IVA:**
 
@@ -166,17 +191,6 @@ Los pesos se redistribuyen proporcionalmente si algún parámetro no tiene dato 
 | 40–60 | Aptitud moderada |
 | 20–40 | Limitaciones importantes |
 | 0–20 | Limitaciones severas |
-
-**Ejemplo de cálculo (secano, textura franco-arcillosa, entorno castellano-manchego):**
-
-| Parámetro | Valor | Categoría | Score/5 | Peso | Aportación |
-|---|---|---|---|---|---|
-| pH (H₂O) | 8,2 | Básico | 3 | 25% | (3/5)×25 = 15,0 |
-| Textura USDA | clay loam | Franco-arcilloso | 4 | 25% | (4/5)×25 = 20,0 |
-| MOS | 0,8% | Bajo | 2 | 20% | (2/5)×20 = 8,0 |
-| P | 8 mg/kg | Bajo | 2 | 15% | (2/5)×15 = 6,0 |
-| K | 180 mg/kg | Alto | 4 | 15% | (4/5)×15 = 12,0 |
-| **IVA** | | | | | **(15+20+8+6+12)/100 × 100 = 61 → Buena aptitud** |
 
 **Umbrales homogeneidad edáfica (RD 1051/2022):**
 
@@ -219,7 +233,7 @@ Los pesos se redistribuyen proporcionalmente si algún parámetro no tiene dato 
 
 #### MOS — Materia Orgánica del Suelo (%)
 
-Calculada como OC × 1,724 (coeficiente de Waksman).
+Calculada como OC (g/kg) ÷ 10 × 1,724 (coeficiente de Waksman).
 
 **Secano:**
 
@@ -239,14 +253,7 @@ Calculada como OC × 1,724 (coeficiente de Waksman).
 
 #### P — Fósforo (mg/kg) por grupo textural y sistema
 
-Las tablas de baremación siguen la metodología FertiPRO / MAPA, diferenciando tres grupos texturales:
-- **Gruesa:** sand, loamy sand, sandy loam
-- **Media:** loam, silt loam, silt
-- **Fina:** resto de clases arcillosas
-
-Los umbrales entre categorías (muy bajo / bajo / normal / alto / muy alto) varían según textura y sistema. El score máximo (5) se asigna a la categoría Normal, que representa el rango de suficiencia sin riesgo de bloqueo por exceso.
-
-> Un P "muy alto" recibe score 3 porque el exceso puede bloquear la absorción de Zn y Fe y supone un riesgo medioambiental por lixiviación.
+Las tablas de baremación siguen la metodología FertiPRO / MAPA, diferenciando tres grupos texturales: Gruesa (sand, loamy sand, sandy loam), Media (loam, silt loam, silt) y Fina (resto de arcillosas). El score máximo (5) se asigna a la categoría Normal. Un P "muy alto" recibe score 3 porque el exceso puede bloquear la absorción de Zn y Fe.
 
 #### K — Potasio (mg/kg) por grupo textural y sistema
 
@@ -261,6 +268,7 @@ Misma lógica que P. El potasio "muy alto" (score 3) indica riesgo de antagonism
 - Consulta por bbox: cuadrícula 4×4 de puntos con deduplicación por referencia catastral
 - Intersección geométrica con `turf.intersect()` sobre WKT del FEGA
 - 32 códigos de uso SIGPAC clasificados (agrícola / no agrícola)
+- Recintos SIGPAC almacenados por parcela para exportación comparativa correcta
 - Licencia datos SIGPAC: Creative Commons BY 4.0 — FEGA
 
 ---
