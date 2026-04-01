@@ -47,11 +47,15 @@ export default function App() {
   const rasterEnabled = useRef(true)
   const markersRef    = useRef([])
   const pointsRef     = useRef([])
-
+  const parcelasRef   = useRef([])
+  const labelLayers   = useRef({})
+  const gridLayers    = useRef({})
+  const parcelaCount  = useRef(0)
   const [points,       setPoints]       = useState([])
   const [selected,     setSelected]     = useState(null)
   const [gridParam,    setGridParam]    = useState('iva')
-  const [polygon,      setPolygon]      = useState(null)
+  const [parcelas,        setParcelas]        = useState([])
+  const [parcelaActivaId, setParcelaActivaId] = useState(null)
   const [loading,      setLoading]      = useState(true)
   const [coords,       setCoords]       = useState(null)
   const [sistema,      setSistema]      = useState('secano')
@@ -133,43 +137,88 @@ export default function App() {
     })
     map.on('mouseout', () => setCoords(null))
 
-    map.on('pm:create', async (e) => {
-      drawnItems.current.clearLayers()
-      drawnItems.current.addLayer(e.layer)
+   map.on('pm:create', async (e) => {
+      parcelaCount.current += 1
+      const id = parcelaCount.current
+      const nombre = `Parcela ${id}`
       const geojson = e.layer.toGeoJSON()
-      setPolygon(geojson)
-      window._sigpacPoligono = geojson
 
       const coords = geojson.geometry.coordinates[0]
       const centLat = coords.reduce((s, c) => s + c[1], 0) / coords.length
       const centLon = coords.reduce((s, c) => s + c[0], 0) / coords.length
+
+      // Etiqueta en mapa
+      const label = L.marker([centLat, centLon], {
+        icon: L.divIcon({
+          className: '',
+          html: `<div style="background:#1a3a2a;color:#e8f5ee;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:500;white-space:nowrap">${nombre}</div>`,
+          iconAnchor: [0, 0],
+        }),
+        interactive: false,
+      }).addTo(map)
+      labelLayers.current[id] = label
+
+      // Grid layer individual
+      const gLayer = new L.FeatureGroup().addTo(map)
+      gridLayers.current[id] = gLayer
+
+      // Clic en polígono → activar parcela
+      e.layer.on('click', () => {
+        setParcelaActivaId(id)
+      })
+
+      const nuevaParcela = { id, nombre, geojson, layer: e.layer, centLat, centLon }
+      parcelasRef.current = [...parcelasRef.current, nuevaParcela]
+      setParcelas([...parcelasRef.current])
+      setParcelaActivaId(id)
+
+      // Puntos vecinos del centroide
       const pts = pointsRef.current
       if (pts.length) {
         const nearest = findNearest({ lat: centLat, lng: centLon }, pts, 5)
         setSelected({ clicked: nearest[0], nearest })
       }
 
-      // Consultar recintos SIGPAC del bbox del polígono
+      // SIGPAC bbox
       const lons = coords.map(c => c[0])
       const lats = coords.map(c => c[1])
       const minLon = Math.min(...lons), maxLon = Math.max(...lons)
       const minLat = Math.min(...lats), maxLat = Math.max(...lats)
-
       try {
         const features = await consultarBbox(minLon, minLat, maxLon, maxLat)
         window._sigpacRecintos = features.map(f => formatearRecinto(f))
+        window._sigpacPoligono = geojson
       } catch {
         window._sigpacRecintos = []
       }
     })
 
-    map.on('pm:remove', () => {
-      setPolygon(null)
-      window._sigpacPoligono = null
-      setSelected(null)
-      setSigpacData(null)
-      gridLayer.current.clearLayers()
-      window._sigpacRecintos = []
+    map.on('pm:remove', (e) => {
+      const id = Object.keys(labelLayers.current).find(k =>
+        parcelasRef.current.find(p => p.id === parseInt(k) && p.layer === e.layer)
+      )
+      if (id) {
+        const numId = parseInt(id)
+        if (labelLayers.current[numId]) {
+          map.removeLayer(labelLayers.current[numId])
+          delete labelLayers.current[numId]
+        }
+        if (gridLayers.current[numId]) {
+          map.removeLayer(gridLayers.current[numId])
+          delete gridLayers.current[numId]
+        }
+        parcelasRef.current = parcelasRef.current.filter(p => p.id !== numId)
+        setParcelas([...parcelasRef.current])
+        if (parcelasRef.current.length > 0) {
+          setParcelaActivaId(parcelasRef.current[parcelasRef.current.length - 1].id)
+        } else {
+          setParcelaActivaId(null)
+          setSelected(null)
+          setSigpacData(null)
+          window._sigpacPoligono = null
+          window._sigpacRecintos = []
+        }
+      }
     })
 
     mapObj.current = map
@@ -222,14 +271,14 @@ export default function App() {
   // Raster continuo
   useEffect(() => {
     if (!points.length || !mapObj.current || !rasterLayer.current) return
-    if (polygon) {
+    if (parcelas.length > 0) {
       rasterLayer.current.clearLayers()
       return
     }
 
     const render = () => {
       if (
-        !polygon &&
+        parcelas.length === 0 &&
         rasterEnabled.current &&
         pointsRef.current.length &&
         mapObj.current?.getZoom() >= 9
@@ -241,17 +290,24 @@ export default function App() {
     render()
     mapObj.current.on('moveend', render)
     return () => mapObj.current?.off('moveend', render)
-  }, [points, polygon, gridParam, sistema])
+  }, [points, parcelas, gridParam, sistema])
 
-  // Grid parcelario
+  // Grid parcelario — repintar al cambiar parcela activa o parámetro
   useEffect(() => {
-    if (!polygon || !points.length || !gridLayer.current) return
-    paintGrid(polygon, points, gridParam, gridLayer.current, sistema)
-  }, [polygon, gridParam, points, sistema])
+    if (!points.length) return
+    Object.entries(gridLayers.current).forEach(([id, gLayer]) => {
+      const parcela = parcelasRef.current.find(p => p.id === parseInt(id))
+      if (parcela) {
+        paintGrid(parcela.geojson, points, gridParam, gLayer, sistema)
+      }
+    })
+  }, [parcelaActivaId, gridParam, points, sistema])
 
- const handleExport = () => {
+const parcelaActiva = parcelas.find(p => p.id === parcelaActivaId) || null
+
+  const handleExport = () => {
     if (!selected) return
-    exportExcel(selected.nearest, gridParam, sistema, polygon)
+    exportExcel(selected.nearest, gridParam, sistema, parcelaActiva?.geojson || null)
   }
 
   return (
@@ -403,6 +459,23 @@ export default function App() {
         </div>
 
         <aside className="panel">
+          {parcelas.length > 0 && (
+            <div style={{ padding: '10px 16px', borderBottom: '1px solid #f0f0ea' }}>
+              <label style={{ fontSize: 11, color: '#888', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>
+                Parcela activa
+              </label>
+              <select
+                value={parcelaActivaId || ''}
+                onChange={e => setParcelaActivaId(parseInt(e.target.value))}
+                style={{ width: '100%', padding: '6px 8px', border: '1px solid #ddd', borderRadius: 4, fontSize: 13, background: '#fff' }}
+              >
+                {parcelas.map(p => (
+                  <option key={p.id} value={p.id}>{p.nombre}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
           {!selected ? (
             <div className="panel-empty">
               <span className="icon">📍</span>
@@ -410,7 +483,7 @@ export default function App() {
             </div>
           ) : (
             <>
-              <ParamPanel selected={selected} polygon={polygon} />
+              <ParamPanel selected={selected} polygon={parcelaActiva?.geojson || null} />
               <SigpacPanel data={sigpacData} loading={sigpacLoading} />
               <button className="btn-export" onClick={handleExport}>
                 Descargar informe Excel
@@ -419,7 +492,7 @@ export default function App() {
           )}
 
           <GridControls
-            polygon={polygon}
+            polygon={parcelaActiva?.geojson || null}
             gridParam={gridParam}
             setGridParam={setGridParam}
             options={PARAM_OPTIONS}
