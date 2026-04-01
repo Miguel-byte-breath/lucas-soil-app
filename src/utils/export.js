@@ -423,4 +423,3 @@ export function exportExcelComparativo(parcelas, allPoints, sistema = 'secano') 
 
   XLSX.writeFile(wb, `LUCAS_comparativa_${new Date().toISOString().slice(0, 10)}.xlsx`)
 }
-}
