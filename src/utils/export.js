@@ -136,54 +136,7 @@ export function exportExcel(neighbors, gridParam, sistema = 'secano', polygon = 
   
   // ── Hoja 4: Recintos SIGPAC ──
   if (window._sigpacRecintos && window._sigpacRecintos.length > 0) {
-    const sigpacHeader = [
-      'Provincia', 'Municipio', 'Polígono', 'Parcela', 'Recinto',
-      'Uso SIGPAC', 'Descripción uso', 'Agrícola',
-      'Superficie recinto (ha)', 'Sup. intersección (ha)',
-      'Admisibilidad (%)', 'Coef. regadío (%)',
-      'Zona nitratos', 'Altitud media (m)', 'Incidencias',
-    ]
-   const poligono = window._sigpacPoligono || null
-    const sigpacRows = window._sigpacRecintos
-      .filter(r => {
-        if (!poligono || !r.wkt) {
-          return true
-        }
-        const calc = calcularInterseccion(poligono, r.wkt)
-        return calc !== null
-      })
-      .map(r => {
-      const supInterseccion = poligono && r.wkt
-        ? parseFloat(calcularInterseccion(poligono, r.wkt))
-        : '—'
-      return [
-        r.provincia    || '—',
-        r.municipio    || '—',
-        r.poligono     || '—',
-        r.parcela      || '—',
-        r.recinto      || '—',
-        r.uso          || '—',
-        r.usoDesc      || '—',
-        r.agricola     ? 'Sí' : 'No',
-        r.superficie   || '—',
-        supInterseccion,
-        r.admisibilidad|| '—',
-        r.regadio      || '—',
-        r.nitratos     || '—',
-        r.altitud      || '—',
-        r.incidencias  || '—',
-      ]
-    })
-    const ws4 = XLSX.utils.aoa_to_sheet([sigpacHeader, ...sigpacRows])
-    ws4['!cols'] = [
-      { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 },
-      { wch: 8 },  { wch: 28 }, { wch: 10 },
-      { wch: 20 }, { wch: 20 }, { wch: 16 }, { wch: 16 },
-      { wch: 14 }, { wch: 16 }, { wch: 20 },
-    ]
-    XLSX.utils.book_append_sheet(wb, ws4, 'Recintos SIGPAC')
-  }
-
+  
   // Descargar
   XLSX.writeFile(wb, `LUCAS_suelo_${new Date().toISOString().slice(0,10)}.xlsx`)
 }
