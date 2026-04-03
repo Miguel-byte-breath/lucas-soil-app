@@ -50,7 +50,9 @@ export default function App() {
   const parcelasRef   = useRef([])
   const labelLayers   = useRef({})
   const gridLayers    = useRef({})
-  const parcelaCount  = useRef(0)
+  const parcelaCount       = useRef(0)
+  const parcelaActivaIdRef = useRef(null)
+  const fileInputRef       = useRef(null)
   const fileInputRef       = useRef(null)
   const [points,       setPoints]       = useState([])
   const [selected,     setSelected]     = useState(null)
@@ -64,9 +66,7 @@ export default function App() {
   const [sigpacLoading,setSigpacLoading]= useState(false)
   const [infoModal,    setInfoModal]    = useState(false)
 
-  // Cargar datos
-  useEffect(() => {
-    // ── Cargar parcela desde GeoJSON feature (externo) ──
+  // ── Cargar parcela desde GeoJSON feature (externo) ──
   const crearParcelaDesdeFeature = async (feature) => {
     const map = mapObj.current
     if (!map) return
@@ -78,20 +78,17 @@ export default function App() {
 
     const geojson = { type: 'Feature', geometry: feature.geometry, properties: props }
 
-    // Capa Leaflet desde GeoJSON
     const geoLayer = L.geoJSON(geojson, { style: { color: '#3388ff', weight: 2, fillOpacity: 0.1 } })
     const layer    = geoLayer.getLayers()[0]
     if (!layer) return
     layer.addTo(map)
 
-    // Centroide (Polygon y MultiPolygon)
     const ring   = geojson.geometry.type === 'MultiPolygon'
       ? geojson.geometry.coordinates[0][0]
       : geojson.geometry.coordinates[0]
     const centLat = ring.reduce((s, c) => s + c[1], 0) / ring.length
     const centLon = ring.reduce((s, c) => s + c[0], 0) / ring.length
 
-    // Etiqueta en mapa
     const label = L.marker([centLat, centLon], {
       icon: L.divIcon({
         className: '',
@@ -102,7 +99,6 @@ export default function App() {
     }).addTo(map)
     labelLayers.current[id] = label
 
-    // Grid layer individual
     const gLayer = new L.FeatureGroup().addTo(map)
     gLayer.on('click', (ev) => {
       L.DomEvent.stopPropagation(ev)
@@ -116,7 +112,6 @@ export default function App() {
     })
     gridLayers.current[id] = gLayer
 
-    // Clic en polígono → activar parcela
     layer.on('click', (ev) => {
       L.DomEvent.stopPropagation(ev)
       setParcelaActivaId(id)
@@ -139,7 +134,6 @@ export default function App() {
       setSelected({ clicked: nearest[0], nearest })
     }
 
-    // SIGPAC bbox
     const bounds = layer.getBounds()
     try {
       const feats    = await consultarBbox(bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth())
@@ -200,13 +194,23 @@ export default function App() {
       await crearParcelaDesdeFeature(feat)
     }
 
-    // Encuadrar mapa al extent de las parcelas recién cargadas
     const nuevas = parcelasRef.current.filter(p => p.id > startId)
     if (nuevas.length && mapObj.current) {
       const group = L.featureGroup(nuevas.map(p => p.layer))
       mapObj.current.fitBounds(group.getBounds(), { padding: [40, 40] })
     }
   }
+
+  // Cargar datos
+  useEffect(() => {
+    fetch('/data/lucas_spain.json')
+      .then(r => r.json())
+      .then(data => {
+        setPoints(data.points)
+        pointsRef.current = data.points
+        setLoading(false)
+      })
+  }, [])
     fetch('/data/lucas_spain.json')
       .then(r => r.json())
       .then(data => {
