@@ -420,16 +420,23 @@ export default function App() {
 
       // Grid layer individual
       const gLayer = new L.FeatureGroup().addTo(map)
-      gLayer.on('click', (e) => {
-        L.DomEvent.stopPropagation(e)
-        setParcelaActivaId(id)
-        parcelaActivaIdRef.current = id
-        const parcela = parcelasRef.current.find(p => p.id === id)
-        if (parcela && pointsRef.current.length) {
-          const nearest = findNearest({ lat: parcela.centLat, lng: parcela.centLon }, pointsRef.current, 5)
-          setSelected({ clicked: nearest[0], nearest })
-        }
-      })
+     gLayer.on('click', (ev) => {
+      L.DomEvent.stopPropagation(ev)
+      setParcelaActivaId(id)
+      parcelaActivaIdRef.current = id
+      const p = parcelasRef.current.find(p => p.id === id)
+      if (p && pointsRef.current.length) {
+        const nearest = findNearest({ lat: p.centLat, lng: p.centLon }, pointsRef.current, 5)
+        setSelected({ clicked: nearest[0], nearest })
+      }
+      setSigpacLoading(true)
+      setSigpacData(null)
+      consultarPunto(ev.latlng.lat, ev.latlng.lng)
+        .then(raw => setSigpacData(formatearRecinto(raw)))
+        .catch(() => setSigpacData(null))
+        .finally(() => setSigpacLoading(false))
+    })
+    gridLayers.current[id] = gLayer
       gridLayers.current[id] = gLayer
 
    // Clic en polígono → activar parcela
