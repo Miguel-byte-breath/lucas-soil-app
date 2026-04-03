@@ -191,7 +191,7 @@ export default function App() {
 
   function parseShp(buf, props) {
     const v   = new DataView(buf)
-    const len = v.getInt32(6, false) * 2
+    const len = v.getInt32(24, false) * 2
     const feats = []
     let off = 100
     let i   = 0
