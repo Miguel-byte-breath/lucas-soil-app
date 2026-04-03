@@ -170,15 +170,21 @@ export default function App() {
     let features = []
     try {
       if (file.name.toLowerCase().endsWith('.zip')) {
-        const buffer = await file.arrayBuffer()
-        const result = await shpjs(buffer)
-        const fcs    = Array.isArray(result) ? result : [result]
-        features     = fcs.flatMap(fc => fc.features || [])
+        const { default: JSZip } = await import('jszip')
+        const zip = await JSZip.loadAsync(await file.arrayBuffer())
+        const files = Object.values(zip.files)
+        const shpFile = files.find(f => f.name.toLowerCase().endsWith('.shp'))
+        const dbfFile = files.find(f => f.name.toLowerCase().endsWith('.dbf'))
+        if (!shpFile) throw new Error('No se encontró archivo .shp dentro del ZIP')
+        const shpBuf = await shpFile.async('arraybuffer')
+        const dbfBuf = dbfFile ? await dbfFile.async('arraybuffer') : null
+        const props  = dbfBuf ? parseDbf(dbfBuf) : []
+        features     = parseShp(shpBuf, props)
       } else {
         const text   = await file.text()
         const parsed = JSON.parse(text)
-        if (parsed.type === 'FeatureCollection')    features = parsed.features || []
-        else if (parsed.type === 'Feature')          features = [parsed]
+        if (parsed.type === 'FeatureCollection')         features = parsed.features || []
+        else if (parsed.type === 'Feature')              features = [parsed]
         else if (parsed.type === 'Polygon' || parsed.type === 'MultiPolygon')
           features = [{ type: 'Feature', geometry: parsed, properties: {} }]
       }
