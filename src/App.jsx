@@ -53,7 +53,6 @@ export default function App() {
   const parcelaCount       = useRef(0)
   const parcelaActivaIdRef = useRef(null)
   const fileInputRef       = useRef(null)
-  const fileInputRef       = useRef(null)
   const [points,       setPoints]       = useState([])
   const [selected,     setSelected]     = useState(null)
   const [gridParam,    setGridParam]    = useState('iva')
@@ -211,15 +210,6 @@ export default function App() {
         setLoading(false)
       })
   }, [])
-    fetch('/data/lucas_spain.json')
-      .then(r => r.json())
-      .then(data => {
-        setPoints(data.points)
-        pointsRef.current = data.points
-        setLoading(false)
-      })
-  }, [])
-
   // Inicializar mapa
   useEffect(() => {
     if (mapObj.current) return
