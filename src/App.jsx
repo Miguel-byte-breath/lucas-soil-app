@@ -51,7 +51,7 @@ export default function App() {
   const labelLayers   = useRef({})
   const gridLayers    = useRef({})
   const parcelaCount  = useRef(0)
-  const parcelaActivaIdRef = useRef(null)
+  const fileInputRef       = useRef(null)
   const [points,       setPoints]       = useState([])
   const [selected,     setSelected]     = useState(null)
   const [gridParam,    setGridParam]    = useState('iva')
@@ -66,6 +66,147 @@ export default function App() {
 
   // Cargar datos
   useEffect(() => {
+    // ── Cargar parcela desde GeoJSON feature (externo) ──
+  const crearParcelaDesdeFeature = async (feature) => {
+    const map = mapObj.current
+    if (!map) return
+
+    parcelaCount.current += 1
+    const id    = parcelaCount.current
+    const props = feature.properties || {}
+    const nombre = props.name || props.nombre || props.NOMBRE || props.Name || `Parcela ${id}`
+
+    const geojson = { type: 'Feature', geometry: feature.geometry, properties: props }
+
+    // Capa Leaflet desde GeoJSON
+    const geoLayer = L.geoJSON(geojson, { style: { color: '#3388ff', weight: 2, fillOpacity: 0.1 } })
+    const layer    = geoLayer.getLayers()[0]
+    if (!layer) return
+    layer.addTo(map)
+
+    // Centroide (Polygon y MultiPolygon)
+    const ring   = geojson.geometry.type === 'MultiPolygon'
+      ? geojson.geometry.coordinates[0][0]
+      : geojson.geometry.coordinates[0]
+    const centLat = ring.reduce((s, c) => s + c[1], 0) / ring.length
+    const centLon = ring.reduce((s, c) => s + c[0], 0) / ring.length
+
+    // Etiqueta en mapa
+    const label = L.marker([centLat, centLon], {
+      icon: L.divIcon({
+        className: '',
+        html: `<div style="background:#1a3a2a;color:#e8f5ee;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:500;white-space:nowrap">${nombre}</div>`,
+        iconAnchor: [0, 0],
+      }),
+      interactive: false,
+    }).addTo(map)
+    labelLayers.current[id] = label
+
+    // Grid layer individual
+    const gLayer = new L.FeatureGroup().addTo(map)
+    gLayer.on('click', (ev) => {
+      L.DomEvent.stopPropagation(ev)
+      setParcelaActivaId(id)
+      parcelaActivaIdRef.current = id
+      const p = parcelasRef.current.find(p => p.id === id)
+      if (p && pointsRef.current.length) {
+        const nearest = findNearest({ lat: p.centLat, lng: p.centLon }, pointsRef.current, 5)
+        setSelected({ clicked: nearest[0], nearest })
+      }
+    })
+    gridLayers.current[id] = gLayer
+
+    // Clic en polígono → activar parcela
+    layer.on('click', (ev) => {
+      L.DomEvent.stopPropagation(ev)
+      setParcelaActivaId(id)
+      parcelaActivaIdRef.current = id
+      const p = parcelasRef.current.find(p => p.id === id)
+      if (p && pointsRef.current.length) {
+        const nearest = findNearest({ lat: p.centLat, lng: p.centLon }, pointsRef.current, 5)
+        setSelected({ clicked: nearest[0], nearest })
+      }
+    })
+
+    const nuevaParcela = { id, nombre, geojson, layer, centLat, centLon }
+    parcelasRef.current = [...parcelasRef.current, nuevaParcela]
+    setParcelas([...parcelasRef.current])
+    setParcelaActivaId(id)
+    parcelaActivaIdRef.current = id
+
+    if (pointsRef.current.length) {
+      const nearest = findNearest({ lat: centLat, lng: centLon }, pointsRef.current, 5)
+      setSelected({ clicked: nearest[0], nearest })
+    }
+
+    // SIGPAC bbox
+    const bounds = layer.getBounds()
+    try {
+      const feats    = await consultarBbox(bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth())
+      const recintos = feats.map(f => formatearRecinto(f))
+      window._sigpacRecintos = recintos
+      window._sigpacPoligono = geojson
+      if (!window._sigpacRecintosPorParcela) window._sigpacRecintosPorParcela = {}
+      window._sigpacRecintosPorParcela[id] = { recintos, geojson }
+    } catch {
+      window._sigpacRecintos = []
+      if (!window._sigpacRecintosPorParcela) window._sigpacRecintosPorParcela = {}
+      window._sigpacRecintosPorParcela[id] = { recintos: [], geojson }
+    }
+  }
+
+  // ── Cargar archivo GeoJSON o Shapefile (.zip) ──
+  const handleFileLoad = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    e.target.value = ''
+
+    let features = []
+    try {
+      if (file.name.toLowerCase().endsWith('.zip')) {
+        const { default: shpjs } = await import('shpjs')
+        const buffer = await file.arrayBuffer()
+        const result = await shpjs(buffer)
+        const fcs    = Array.isArray(result) ? result : [result]
+        features     = fcs.flatMap(fc => fc.features || [])
+      } else {
+        const text   = await file.text()
+        const parsed = JSON.parse(text)
+        if (parsed.type === 'FeatureCollection')    features = parsed.features || []
+        else if (parsed.type === 'Feature')          features = [parsed]
+        else if (parsed.type === 'Polygon' || parsed.type === 'MultiPolygon')
+          features = [{ type: 'Feature', geometry: parsed, properties: {} }]
+      }
+    } catch (err) {
+      alert('Error al cargar el archivo: ' + err.message)
+      return
+    }
+
+    features = features.filter(f =>
+      f.geometry?.type === 'Polygon' || f.geometry?.type === 'MultiPolygon'
+    )
+    if (!features.length) {
+      alert('No se encontraron geometrías de tipo Polígono en el archivo.')
+      return
+    }
+    const CAP = 20
+    if (features.length > CAP) {
+      alert(`El archivo contiene ${features.length} polígonos. Se cargarán los primeros ${CAP}.`)
+      features = features.slice(0, CAP)
+    }
+
+    const startId = parcelaCount.current
+    for (const feat of features) {
+      await crearParcelaDesdeFeature(feat)
+    }
+
+    // Encuadrar mapa al extent de las parcelas recién cargadas
+    const nuevas = parcelasRef.current.filter(p => p.id > startId)
+    if (nuevas.length && mapObj.current) {
+      const group = L.featureGroup(nuevas.map(p => p.layer))
+      mapObj.current.fitBounds(group.getBounds(), { padding: [40, 40] })
+    }
+  }
     fetch('/data/lucas_spain.json')
       .then(r => r.json())
       .then(data => {
@@ -222,6 +363,26 @@ export default function App() {
         if (title === 'Mi ubicacion') {
           icon.style.backgroundImage = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23555' stroke-width='2'%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3Cpath d='M12 2v4M12 18v4M2 12h4M18 12h4'/%3E%3C/svg%3E\")"
         }
+      })
+    }, 500)
+    // Control personalizado — Cargar GeoJSON / Shapefile
+    map.pm.Toolbar.createCustomControl({
+      name:     'cargarGeometria',
+      block:    'draw',
+      title:    'Cargar geometria',
+      html:     '',
+      cssClass: 'pm-cargar-geometria',
+      toggle:   false,
+      onClick:  () => { fileInputRef.current?.click() },
+    })
+    setTimeout(() => {
+      const btns = document.querySelectorAll(
+        '.leaflet-pm-toolbar .button-container, .leaflet-pm-toolbar .leaflet-buttons-control-button'
+      )
+      btns.forEach(btn => {
+        if (btn.getAttribute('title') !== 'Cargar geometria') return
+        const icon = btn.querySelector('.control-icon')
+        if (icon) icon.style.backgroundImage = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23555' stroke-width='2'%3E%3Cpath d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'/%3E%3Cpolyline points='17 8 12 3 7 8'/%3E%3Cline x1='12' y1='3' x2='12' y2='15'/%3E%3C/svg%3E\")"
       })
     }, 500)
     map.on('mousemove', (e) => {
@@ -660,6 +821,13 @@ parcelaActivaIdRef.current = parcelaActivaId
           />
         </aside>
       </div>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".geojson,.json,.zip"
+        style={{ display: 'none' }}
+        onChange={handleFileLoad}
+      />
     </>
   )
 }
