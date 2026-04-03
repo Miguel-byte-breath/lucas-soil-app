@@ -11,6 +11,7 @@ import SigpacPanel from './components/SigpacPanel.jsx'
 import { paintGrid } from './utils/grid.js'
 import { paintRaster } from './utils/raster.js'
 import { consultarPunto, consultarBbox, formatearRecinto, esAgricola } from './utils/sigpac.js'
+import shpjs from 'shpjs'
 
 const PARAM_OPTIONS = [
   { value: 'pH',   label: 'pH (H₂O)' },
@@ -169,9 +170,8 @@ export default function App() {
     let features = []
     try {
       if (file.name.toLowerCase().endsWith('.zip')) {
-        const { default: shpjs } = await import('shpjs')
         const buffer = await file.arrayBuffer()
-        const result = await shpjs.parseZip(buffer)
+        const result = await shpjs(buffer)
         const fcs    = Array.isArray(result) ? result : [result]
         features     = fcs.flatMap(fc => fc.features || [])
       } else {
