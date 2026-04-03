@@ -11,7 +11,7 @@ import SigpacPanel from './components/SigpacPanel.jsx'
 import { paintGrid } from './utils/grid.js'
 import { paintRaster } from './utils/raster.js'
 import { consultarPunto, consultarBbox, formatearRecinto, esAgricola } from './utils/sigpac.js'
-import shpjs from 'shpjs'
+
 
 const PARAM_OPTIONS = [
   { value: 'pH',   label: 'pH (H₂O)' },
@@ -162,6 +162,67 @@ export default function App() {
   }
 
   // ── Cargar archivo GeoJSON o Shapefile (.zip) ──
+  function parseDbf(buf) {
+    const v   = new DataView(buf)
+    const n   = v.getInt32(4, true)
+    const hdr = v.getUint16(8, true)
+    const fields = []
+    let off = 32
+    while (v.getUint8(off) !== 0x0D) {
+      const name = String.fromCharCode(...new Uint8Array(buf, off, 11)).replace(/\0/g, '')
+      const len  = v.getUint8(off + 16)
+      fields.push({ name, len })
+      off += 32
+    }
+    const recLen = v.getUint16(10, true)
+    const rows   = []
+    for (let i = 0; i < n; i++) {
+      let pos = hdr + i * recLen + 1
+      const row = {}
+      fields.forEach(f => {
+        const bytes = new Uint8Array(buf, pos, f.len)
+        row[f.name] = new TextDecoder().decode(bytes).trim()
+        pos += f.len
+      })
+      rows.push(row)
+    }
+    return rows
+  }
+
+  function parseShp(buf, props) {
+    const v   = new DataView(buf)
+    const len = v.getInt32(6, false) * 2
+    const feats = []
+    let off = 100
+    let i   = 0
+    while (off < len) {
+      off += 4
+      const cLen = v.getInt32(off, false) * 2; off += 4
+      const type = v.getInt32(off, true)
+      if (type === 5 || type === 15) {
+        off += 4
+        off += 32
+        const nParts  = v.getInt32(off, true); off += 4
+        const nPoints = v.getInt32(off, true); off += 4
+        const parts   = []
+        for (let p = 0; p < nParts; p++) { parts.push(v.getInt32(off, true)); off += 4 }
+        const pts = []
+        for (let p = 0; p < nPoints; p++) {
+          pts.push([v.getFloat64(off, true), v.getFloat64(off + 8, true)]); off += 16
+        }
+        const rings = parts.map((start, idx) => pts.slice(start, parts[idx + 1] || pts.length))
+        feats.push({
+          type: 'Feature',
+          geometry: { type: 'Polygon', coordinates: rings },
+          properties: props[i] || {},
+        })
+      } else {
+        off += cLen
+      }
+      i++
+    }
+    return feats
+  }
   const handleFileLoad = async (e) => {
     const file = e.target.files[0]
     if (!file) return
