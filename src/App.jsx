@@ -99,7 +99,7 @@ export default function App() {
     labelLayers.current[id] = label
 
     const gLayer = new L.FeatureGroup().addTo(map)
-    gLayer.on('click', (ev) => {
+   gLayer.on('click', (ev) => {
       L.DomEvent.stopPropagation(ev)
       setParcelaActivaId(id)
       parcelaActivaIdRef.current = id
@@ -108,6 +108,12 @@ export default function App() {
         const nearest = findNearest({ lat: p.centLat, lng: p.centLon }, pointsRef.current, 5)
         setSelected({ clicked: nearest[0], nearest })
       }
+      setSigpacLoading(true)
+      setSigpacData(null)
+      consultarPunto(ev.latlng.lat, ev.latlng.lng)
+        .then(raw => setSigpacData(formatearRecinto(raw)))
+        .catch(() => setSigpacData(null))
+        .finally(() => setSigpacLoading(false))
     })
     gridLayers.current[id] = gLayer
 
