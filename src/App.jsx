@@ -171,7 +171,7 @@ export default function App() {
       if (file.name.toLowerCase().endsWith('.zip')) {
         const { default: shpjs } = await import('shpjs')
         const buffer = await file.arrayBuffer()
-        const result = await shpjs(buffer)
+        const result = await shpjs.parseZip(buffer)
         const fcs    = Array.isArray(result) ? result : [result]
         features     = fcs.flatMap(fc => fc.features || [])
       } else {
