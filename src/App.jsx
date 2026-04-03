@@ -111,7 +111,7 @@ export default function App() {
     })
     gridLayers.current[id] = gLayer
 
-    layer.on('click', (ev) => {
+   layer.on('click', (ev) => {
       L.DomEvent.stopPropagation(ev)
       setParcelaActivaId(id)
       parcelaActivaIdRef.current = id
@@ -120,6 +120,12 @@ export default function App() {
         const nearest = findNearest({ lat: p.centLat, lng: p.centLon }, pointsRef.current, 5)
         setSelected({ clicked: nearest[0], nearest })
       }
+      setSigpacLoading(true)
+      setSigpacData(null)
+      consultarPunto(ev.latlng.lat, ev.latlng.lng)
+        .then(raw => setSigpacData(formatearRecinto(raw)))
+        .catch(() => setSigpacData(null))
+        .finally(() => setSigpacLoading(false))
     })
 
     const nuevaParcela = { id, nombre, geojson, layer, centLat, centLon }
@@ -420,7 +426,7 @@ export default function App() {
       })
       gridLayers.current[id] = gLayer
 
-      // Clic en polígono → activar parcela
+   // Clic en polígono → activar parcela
       e.layer.on('click', (e) => {
         L.DomEvent.stopPropagation(e)
         setParcelaActivaId(id)
@@ -430,6 +436,12 @@ export default function App() {
           const nearest = findNearest({ lat: parcela.centLat, lng: parcela.centLon }, pointsRef.current, 5)
           setSelected({ clicked: nearest[0], nearest })
         }
+        setSigpacLoading(true)
+        setSigpacData(null)
+        consultarPunto(e.latlng.lat, e.latlng.lng)
+          .then(raw => setSigpacData(formatearRecinto(raw)))
+          .catch(() => setSigpacData(null))
+          .finally(() => setSigpacLoading(false))
       })
 
       const nuevaParcela = { id, nombre, geojson, layer: e.layer, centLat, centLon }
