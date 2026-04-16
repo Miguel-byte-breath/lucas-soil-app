@@ -354,10 +354,16 @@ export function exportExcelComparativo(parcelas, allPoints, sistema = 'secano') 
   })
 
   // ── Hoja 1: Comparativa IVA ──
-  const colHeaders = ['Parametro', ...parcelas.map(p => p.nombre)]
-  if (parcelas.length === 2) {
-    colHeaders.push('Diferencia', 'Interpretacion RD 1051/2022')
-  }
+  const catRank = iva => iva >= 80 ? 4 : iva >= 60 ? 3 : iva >= 40 ? 2 : iva >= 20 ? 1 : 0
+  const catLabel = rank => ['Limitaciones severas','Limitaciones importantes','Aptitud moderada','Buena aptitud','Muy buena aptitud'][rank]
+
+  // Categoría predominante del grupo
+  const ivasValidos = datosParcelas.map(d => d.indice).filter(v => v != null)
+  const rankCounts = [0,1,2,3,4].map(r => ({ r, n: ivasValidos.filter(v => catRank(v) === r).length }))
+  const rankPred = rankCounts.reduce((a, b) => b.n > a.n ? b : a).r
+  const catPred = catLabel(rankPred)
+
+  const colHeaders = ['Parametro', ...parcelas.map(p => p.nombre), 'Diferencia categorias', 'Interpretacion RD 1051/2022']
 
   const params = [
     { label: 'IVA (0-100)',        key: d => d.indice ?? '—' },
@@ -382,26 +388,51 @@ export function exportExcelComparativo(parcelas, allPoints, sistema = 'secano') 
 
   const compRows = params.map(p => {
     const row = [p.label, ...datosParcelas.map(d => p.key(d))]
-    if (parcelas.length === 2) {
-      const v1 = datosParcelas[0].indice
-      const v2 = datosParcelas[1].indice
-      if (p.label === 'IVA (0-100)' && v1 != null && v2 != null) {
-        const diff = Math.abs(v1 - v2)
-        const interp = diff < 10
-          ? 'Mismo plan de abonado justificado'
-          : diff <= 20
-          ? 'Un plan con observaciones diferenciadas'
-          : 'Planes independientes recomendados'
-        row.push(diff, interp)
-      } else {
-        row.push('', '')
-      }
+    if (p.label === 'IVA (0-100)') {
+      row.push('vs categoria predominante: ' + catPred, '')
+    } else if (p.label === 'Categoria IVA') {
+      datosParcelas.forEach((d, i) => {
+        if (i === 0) {
+          const diffs = datosParcelas.map(d2 => {
+            if (d2.indice == null) return ''
+            const diff = Math.abs(catRank(d2.indice) - rankPred)
+            const interp = diff === 0
+              ? 'Mismo plan de abonado justificado'
+              : diff === 1
+              ? 'Un plan con observaciones diferenciadas'
+              : 'Plan independiente recomendado'
+            return { diff, interp }
+          })
+          row.push(
+            diffs.map(d => d === '' ? '—' : d.diff).join(' / '),
+            diffs.map(d => d === '' ? '—' : d.interp).join(' | ')
+          )
+        }
+      })
+      if (datosParcelas.length === 0) row.push('', '')
+    } else {
+      row.push('', '')
     }
     return row
   })
 
+  // Fila resumen grupo
+  const ivaMedia = ivasValidos.length ? Math.round(ivasValidos.reduce((a,b) => a+b, 0) / ivasValidos.length * 10) / 10 : '—'
+  const resumenCats = [0,1,2,3,4]
+    .map(r => ({ label: catLabel(r), n: ivasValidos.filter(v => catRank(v) === r).length }))
+    .filter(x => x.n > 0)
+    .map(x => `${x.label}: ${x.n}`)
+    .join(' · ')
+  compRows.push(
+    ['', ...datosParcelas.map(() => ''), '', ''],
+    ['RESUMEN GRUPO', '', ...datosParcelas.slice(1).map(() => ''), '', ''],
+    ['IVA medio grupo', ivaMedia, ...datosParcelas.slice(1).map(() => ''), '', ''],
+    ['Categoria predominante', catPred, ...datosParcelas.slice(1).map(() => ''), '', ''],
+    ['Distribucion por categorias', resumenCats, ...datosParcelas.slice(1).map(() => ''), '', ''],
+  )
+
   const ws1 = XLSX.utils.aoa_to_sheet([colHeaders, ...compRows])
-  ws1['!cols'] = colHeaders.map((_, i) => ({ wch: i === 0 ? 28 : i === colHeaders.length - 1 ? 40 : 18 }))
+  ws1['!cols'] = colHeaders.map((_, i) => ({ wch: i === 0 ? 28 : i === colHeaders.length - 1 ? 42 : 18 }))
   XLSX.utils.book_append_sheet(wb, ws1, 'Comparativa parcelas')
 
   // ── Hoja 2: Metadatos ──
