@@ -687,6 +687,11 @@ parcelaActivaIdRef.current = parcelaActivaId
   return (
     <>
       <header className="app-header">
+        <img
+          src="/fertipro.png"
+          alt="FertiPRO"
+          style={{ height: 28, width: 28, borderRadius: 6, marginRight: 10, flexShrink: 0 }}
+        />
         <h1>LUCAS Soil Explorer — España</h1>
         <span className="subtitle">
           {loading
