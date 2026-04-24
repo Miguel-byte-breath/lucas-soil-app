@@ -325,6 +325,7 @@ export default function App() {
       const b = map.getBounds()
       try {
         const feats = await consultarBbox(b.getWest(), b.getSouth(), b.getEast(), b.getNorth())
+        console.log('feats:', feats.length, JSON.stringify(feats[0]).slice(0, 300))
         sigpacVectorRef.current.clearLayers()
         feats.forEach(f => {
           if (!f.geometry) return
