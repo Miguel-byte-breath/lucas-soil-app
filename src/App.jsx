@@ -328,15 +328,16 @@ export default function App() {
         console.log('feats:', feats.length, JSON.stringify(feats[0]).slice(0, 300))
         sigpacVectorRef.current.clearLayers()
         feats.forEach(f => {
-          if (!f.geometry) return
-          const color = esAgricola(f.properties?.USO_SIGPAC) ? '#2ecc71' : '#e67e22'
-         const turfFeature = wktToGeoJSON(f.properties?.wkt)
+          if (!f.properties?.wkt) return
+          const uso = f.properties?.uso_sigpac
+          const color = esAgricola(uso) ? '#2ecc71' : '#e67e22'
+          const turfFeature = wktToGeoJSON(f.properties.wkt)
           if (!turfFeature) return
           L.geoJSON({ type: 'Feature', geometry: turfFeature.geometry, properties: f.properties }, {
             style: { color, weight: 1.5, fillOpacity: 0.25, fillColor: color },
           })
             .bindTooltip(
-              `${f.properties?.USO_SIGPAC || '—'} · ${f.properties?.SUPERFICIE ? (f.properties.SUPERFICIE / 10000).toFixed(2) + ' ha' : ''}`,
+              `${uso || '—'} · ${f.properties?.superficie ? (f.properties.superficie / 10000).toFixed(2) + ' ha' : ''}`,
               { sticky: true, className: 'sigpac-tip' }
             )
             .addTo(sigpacVectorRef.current)
