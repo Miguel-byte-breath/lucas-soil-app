@@ -306,7 +306,7 @@ export default function App() {
     )
 
    rasterLayer.current     = new L.FeatureGroup()
-    sigpacVectorRef.current = new L.FeatureGroup().addTo(map)
+   sigpacVectorRef.current = new L.FeatureGroup()
     drawnItems.current      = new L.FeatureGroup().addTo(map)
     gridLayer.current       = new L.FeatureGroup().addTo(map)
 
@@ -346,6 +346,7 @@ export default function App() {
       }
       if (e.name === 'Recintos SIGPAC') {
         sigpacVectorOn.current = true
+        sigpacVectorRef.current.addTo(map)
         cargarRecintosSigpac()
       }
     })
@@ -357,6 +358,7 @@ export default function App() {
       if (e.name === 'Recintos SIGPAC') {
         sigpacVectorOn.current = false
         sigpacVectorRef.current.clearLayers()
+        sigpacVectorRef.current.remove()
       }
     })
     map.on('moveend', () => { cargarRecintosSigpac() })
