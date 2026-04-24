@@ -10,7 +10,7 @@ import SearchBox from './components/SearchBox.jsx'
 import SigpacPanel from './components/SigpacPanel.jsx'
 import { paintGrid } from './utils/grid.js'
 import { paintRaster } from './utils/raster.js'
-import { consultarPunto, consultarBbox, formatearRecinto, esAgricola, wktToGeoJSON } from './utils/sigpac.js'
+import { consultarPunto, consultarBbox, formatearRecinto, esAgricola } from './utils/sigpac.js'
 
 
 const PARAM_OPTIONS = [
@@ -324,21 +324,20 @@ export default function App() {
       }
       const b = map.getBounds()
       try {
-        const feats = await consultarBbox(b.getWest(), b.getSouth(), b.getEast(), b.getNorth())
-        console.log('feats:', feats.length, JSON.stringify(feats[0]).slice(0, 300))
+        const _res  = await fetch(`/api/sigpac-bbox?west=${b.getWest()}&south=${b.getSouth()}&east=${b.getEast()}&north=${b.getNorth()}`)
+        const _data = await _res.json()
+        const feats = _data.features || []
         sigpacVectorRef.current.clearLayers()
         feats.forEach(f => {
-          if (!f.properties?.wkt) return
-          const uso = f.properties?.uso_sigpac
+          if (!f.geometry) return
+          const uso   = f.properties?.uso_sigpac
           const color = esAgricola(uso) ? '#2ecc71' : '#e67e22'
-          const turfFeature = wktToGeoJSON(f.properties.wkt)
-          if (!turfFeature) return
-          L.geoJSON({ type: 'Feature', geometry: turfFeature.geometry, properties: f.properties }, {
+          L.geoJSON(f, {
             style: { color, weight: 1.5, fillOpacity: 0.25, fillColor: color },
           })
             .bindTooltip(
               `${uso || '—'} · ${f.properties?.superficie ? (f.properties.superficie / 10000).toFixed(2) + ' ha' : ''}`,
-              { sticky: true, className: 'sigpac-tip' }
+              { sticky: true }
             )
             .addTo(sigpacVectorRef.current)
         })
