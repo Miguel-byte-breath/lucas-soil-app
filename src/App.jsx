@@ -306,7 +306,7 @@ export default function App() {
     )
 
    rasterLayer.current     = new L.FeatureGroup()
-    sigpacVectorRef.current = new L.FeatureGroup()
+    sigpacVectorRef.current = new L.FeatureGroup().addTo(map)
     drawnItems.current      = new L.FeatureGroup().addTo(map)
     gridLayer.current       = new L.FeatureGroup().addTo(map)
 
