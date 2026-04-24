@@ -1,7 +1,7 @@
 import * as turf from '@turf/turf'
 
 // Convierte WKT POLYGON a GeoJSON Feature
-function wktToGeoJSON(wkt) {
+export function wktToGeoJSON(wkt) {
   if (!wkt) return null
   try {
     const inner = wkt.replace(/^POLYGON\s*\(\s*/i, '').replace(/\s*\)$/, '')
