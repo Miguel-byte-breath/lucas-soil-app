@@ -328,18 +328,11 @@ export default function App() {
         const _data = await _res.json()
         const feats = _data.features || []
         sigpacVectorRef.current.clearLayers()
-        feats.forEach(f => {
+      feats.forEach(f => {
           if (!f.geometry) return
-          const uso   = f.properties?.uso_sigpac
-          const color = esAgricola(uso) ? '#2ecc71' : '#e67e22'
           L.geoJSON(f, {
-            style: { color, weight: 1.5, fillOpacity: 0.25, fillColor: color },
-          })
-            .bindTooltip(
-              `${uso || '—'} · ${f.properties?.superficie ? (f.properties.superficie / 10000).toFixed(2) + ' ha' : ''}`,
-              { sticky: true }
-            )
-            .addTo(sigpacVectorRef.current)
+            style: { color: '#cc00ff', weight: 1.5, fillOpacity: 0, opacity: 0.8 },
+          }).addTo(sigpacVectorRef.current)
         })
       } catch { sigpacVectorRef.current.clearLayers() }
     }
