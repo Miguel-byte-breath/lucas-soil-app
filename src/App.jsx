@@ -10,7 +10,7 @@ import SearchBox from './components/SearchBox.jsx'
 import SigpacPanel from './components/SigpacPanel.jsx'
 import { paintGrid } from './utils/grid.js'
 import { paintRaster } from './utils/raster.js'
-import { consultarPunto, consultarBbox, formatearRecinto, esAgricola } from './utils/sigpac.js'
+import { consultarPunto, consultarBbox, formatearRecinto, esAgricola, wktToGeoJSON } from './utils/sigpac.js'
 
 
 const PARAM_OPTIONS = [
@@ -329,7 +329,9 @@ export default function App() {
         feats.forEach(f => {
           if (!f.geometry) return
           const color = esAgricola(f.properties?.USO_SIGPAC) ? '#2ecc71' : '#e67e22'
-          L.geoJSON(f, {
+          const geom = f.geometry || wktToGeoJSON(f.properties?.wkt)
+          if (!geom) return
+          L.geoJSON({ type: 'Feature', geometry: geom.geometry || geom, properties: f.properties }, {
             style: { color, weight: 1.5, fillOpacity: 0.25, fillColor: color },
           })
             .bindTooltip(
