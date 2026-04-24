@@ -306,18 +306,10 @@ export default function App() {
     rasterLayer.current = new L.FeatureGroup()
     drawnItems.current  = new L.FeatureGroup().addTo(map)
     gridLayer.current   = new L.FeatureGroup().addTo(map)
-const sigpacWMS = L.tileLayer.wms('https://www.ign.es/wms-inspire/sigpac', {
-      layers: 'recintos',
-      format: 'image/png',
-      transparent: true,
-      version: '1.3.0',
-      attribution: '© IGN España — SIGPAC',
-      minZoom: 14,
-      opacity: 0.6,
-    })
+
     L.control.layers(
       BASEMAPS,
-     { 'Raster agronómico': rasterLayer.current, 'Recintos SIGPAC': sigpacWMS },
+     { 'Raster agronómico': rasterLayer.current },
       { position: 'topright', collapsed: true }
     ).addTo(map)
 
