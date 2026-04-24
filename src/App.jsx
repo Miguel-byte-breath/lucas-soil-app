@@ -38,7 +38,15 @@ const BASEMAPS = {
     { attribution: '© Esri, Maxar, Earthstar Geographics', maxZoom: 19 }
   ),
 }
-
+const SIGPAC_WMS = L.tileLayer.wms('https://www.ign.es/wms-inspire/sigpac', {
+  layers: 'recintos',
+  format: 'image/png',
+  transparent: true,
+  version: '1.3.0',
+  attribution: '© IGN España — SIGPAC',
+  minZoom: 14,
+  opacity: 0.6,
+})
 export default function App() {
   const mapRef        = useRef(null)
   const mapObj        = useRef(null)
@@ -309,7 +317,7 @@ export default function App() {
 
     L.control.layers(
       BASEMAPS,
-      { 'Raster agronómico': rasterLayer.current },
+      { 'Raster agronómico': rasterLayer.current, 'Recintos SIGPAC': SIGPAC_WMS },
       { position: 'topright', collapsed: true }
     ).addTo(map)
 
