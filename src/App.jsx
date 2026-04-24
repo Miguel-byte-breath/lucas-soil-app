@@ -330,9 +330,9 @@ export default function App() {
         feats.forEach(f => {
           if (!f.geometry) return
           const color = esAgricola(f.properties?.USO_SIGPAC) ? '#2ecc71' : '#e67e22'
-          const geom = f.geometry || wktToGeoJSON(f.properties?.wkt)
-          if (!geom) return
-          L.geoJSON({ type: 'Feature', geometry: geom.geometry || geom, properties: f.properties }, {
+         const turfFeature = wktToGeoJSON(f.properties?.wkt)
+          if (!turfFeature) return
+          L.geoJSON({ type: 'Feature', geometry: turfFeature.geometry, properties: f.properties }, {
             style: { color, weight: 1.5, fillOpacity: 0.25, fillColor: color },
           })
             .bindTooltip(
