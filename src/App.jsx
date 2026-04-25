@@ -61,6 +61,8 @@ export default function App() {
   const [parcelaActivaId, setParcelaActivaId] = useState(null)
   const [loading,      setLoading]      = useState(true)
   const [coords,       setCoords]       = useState(null)
+  const [clickCoords,  setClickCoords]  = useState(null)
+  const clickMarkerRef = useRef(null)
   const [sistema,      setSistema]      = useState('secano')
   const [sigpacData,   setSigpacData]   = useState(null)
   const [sigpacLoading,setSigpacLoading]= useState(false)
@@ -625,6 +627,20 @@ export default function App() {
       const nearest = findNearest({ lat, lng }, points, 5)
       setSelected({ clicked: nearest[0], nearest })
 
+      // Marcador visual en punto clicado
+      if (clickMarkerRef.current) {
+        clickMarkerRef.current.remove()
+        clickMarkerRef.current = null
+      }
+      const pinIcon = L.divIcon({
+        className: '',
+        html: `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="30" viewBox="0 0 22 30"><path d="M11 0C4.925 0 0 4.925 0 11c0 8.25 11 19 11 19s11-10.75 11-19C22 4.925 17.075 0 11 0z" fill="#1a3a2a" stroke="#fff" stroke-width="1.5"/><circle cx="11" cy="11" r="4.5" fill="#e8f5ee"/></svg>`,
+        iconSize: [22, 30],
+        iconAnchor: [11, 30],
+      })
+      clickMarkerRef.current = L.marker([lat, lng], { icon: pinIcon, interactive: false }).addTo(mapObj.current)
+      setClickCoords({ lat: lat.toFixed(6), lng: lng.toFixed(6) })
+
       // Consultar SIGPAC por punto
       setSigpacLoading(true)
       setSigpacData(null)
@@ -825,7 +841,31 @@ parcelaActivaIdRef.current = parcelaActivaId
               .bindPopup(result.label.split(',')[0])
               .openPopup()
           }} />
-
+          {clickCoords && (
+            <div style={{
+              position: 'absolute',
+              top: 12,
+              right: 12,
+              background: 'rgba(26,58,42,0.88)',
+              color: '#e8f5ee',
+              padding: '5px 14px 5px 10px',
+              borderRadius: 5,
+              fontSize: 12,
+              fontFamily: 'monospace',
+              zIndex: 1001,
+              pointerEvents: 'none',
+              letterSpacing: '0.04em',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 7,
+              boxShadow: '0 1px 6px rgba(0,0,0,0.25)',
+            }}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="16" viewBox="0 0 22 30" style={{ flexShrink: 0 }}>
+                <path d="M11 0C4.925 0 0 4.925 0 11c0 8.25 11 19 11 19s11-10.75 11-19C22 4.925 17.075 0 11 0z" fill="#9fd3b5"/>
+              </svg>
+              {clickCoords.lat}° N &nbsp;|&nbsp; {clickCoords.lng}° E
+            </div>
+          )}
           {coords && (
             <div style={{
               position: 'absolute',
