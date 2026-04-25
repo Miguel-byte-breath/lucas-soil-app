@@ -864,6 +864,24 @@ parcelaActivaIdRef.current = parcelaActivaId
         </div>
 
         <aside className="panel">
+          {clickCoords && (
+    <div style={{
+      padding: '6px 16px',
+      borderBottom: '1px solid #e8f0eb',
+      fontFamily: 'monospace',
+      fontSize: 12,
+      color: '#1a3a2a',
+      display: 'flex',
+      alignItems: 'center',
+      gap: 7,
+      background: '#f4faf6',
+    }}>
+      <svg xmlns="http://www.w3.org/2000/svg" width="11" height="15" viewBox="0 0 22 30" style={{ flexShrink: 0 }}>
+        <path d="M11 0C4.925 0 0 4.925 0 11c0 8.25 11 19 11 19s11-10.75 11-19C22 4.925 17.075 0 11 0z" fill="#1a3a2a"/>
+      </svg>
+      {clickCoords.lat}° N &nbsp;|&nbsp; {clickCoords.lng}° E
+    </div>
+  )}
           {parcelas.length > 0 && (
             <div style={{ padding: '10px 16px', borderBottom: '1px solid #f0f0ea' }}>
               <label style={{ fontSize: 11, color: '#888', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>
