@@ -46,8 +46,6 @@ export default function App() {
   const gridLayer     = useRef(null)
   const rasterLayer   = useRef(null)
   const rasterEnabled = useRef(true)
-  const sigpacVectorRef   = useRef(null)
-  const sigpacVectorOn    = useRef(false)
   const markersRef    = useRef([])
   const pointsRef     = useRef([])
   const parcelasRef   = useRef([])
@@ -306,36 +304,14 @@ export default function App() {
     )
 
    rasterLayer.current     = new L.FeatureGroup()
-   sigpacVectorRef.current = new L.FeatureGroup()
     drawnItems.current      = new L.FeatureGroup().addTo(map)
     gridLayer.current       = new L.FeatureGroup().addTo(map)
 
     L.control.layers(
       BASEMAPS,
-      { 'Raster agronómico': rasterLayer.current, 'Recintos SIGPAC': sigpacVectorRef.current },
+      { 'Raster agronómico': rasterLayer.current },
       { position: 'topright', collapsed: true }
     ).addTo(map)
-
-    const cargarRecintosSigpac = async () => {
-      if (!sigpacVectorOn.current) return
-      if (map.getZoom() < 14) {
-        sigpacVectorRef.current.clearLayers()
-        return
-      }
-      const b = map.getBounds()
-      try {
-        const _res  = await fetch(`/api/sigpac-bbox?west=${b.getWest()}&south=${b.getSouth()}&east=${b.getEast()}&north=${b.getNorth()}`)
-        const _data = await _res.json()
-        const feats = _data.features || []
-        sigpacVectorRef.current.clearLayers()
-      feats.forEach(f => {
-          if (!f.geometry) return
-          L.geoJSON(f, {
-            style: { color: '#cc00ff', weight: 1.5, fillOpacity: 0, opacity: 0.8 },
-          }).addTo(sigpacVectorRef.current)
-        })
-      } catch { sigpacVectorRef.current.clearLayers() }
-    }
 
     map.on('overlayadd', (e) => {
       if (e.name === 'Raster agronómico') {
@@ -344,25 +320,14 @@ export default function App() {
           paintRaster(map, pointsRef.current, gridParam, rasterLayer.current, sistema)
         }
       }
-      if (e.name === 'Recintos SIGPAC') {
-        sigpacVectorOn.current = true
-        sigpacVectorRef.current.addTo(map)
-        cargarRecintosSigpac()
-      }
     })
     map.on('overlayremove', (e) => {
       if (e.name === 'Raster agronómico') {
         rasterEnabled.current = false
         rasterLayer.current.clearLayers()
       }
-      if (e.name === 'Recintos SIGPAC') {
-        sigpacVectorOn.current = false
-        sigpacVectorRef.current.clearLayers()
-        sigpacVectorRef.current.remove()
-      }
     })
-    map.on('moveend', () => { cargarRecintosSigpac() })
-
+    
     L.control.scale({ imperial: false, position: 'bottomleft' }).addTo(map)
 
     map.pm.addControls({
