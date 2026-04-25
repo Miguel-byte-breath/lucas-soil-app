@@ -841,31 +841,7 @@ parcelaActivaIdRef.current = parcelaActivaId
               .bindPopup(result.label.split(',')[0])
               .openPopup()
           }} />
-          {clickCoords && (
-            <div style={{
-              position: 'absolute',
-              top: 12,
-              right: 12,
-              background: 'rgba(26,58,42,0.88)',
-              color: '#e8f5ee',
-              padding: '5px 14px 5px 10px',
-              borderRadius: 5,
-              fontSize: 12,
-              fontFamily: 'monospace',
-              zIndex: 1001,
-              pointerEvents: 'none',
-              letterSpacing: '0.04em',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 7,
-              boxShadow: '0 1px 6px rgba(0,0,0,0.25)',
-            }}>
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="16" viewBox="0 0 22 30" style={{ flexShrink: 0 }}>
-                <path d="M11 0C4.925 0 0 4.925 0 11c0 8.25 11 19 11 19s11-10.75 11-19C22 4.925 17.075 0 11 0z" fill="#9fd3b5"/>
-              </svg>
-              {clickCoords.lat}° N &nbsp;|&nbsp; {clickCoords.lng}° E
-            </div>
-          )}
+          
           {coords && (
             <div style={{
               position: 'absolute',
