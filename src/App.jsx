@@ -11,7 +11,7 @@ import SigpacPanel from './components/SigpacPanel.jsx'
 import { paintGrid } from './utils/grid.js'
 import { paintRaster } from './utils/raster.js'
 import { consultarPunto, consultarBbox, formatearRecinto, esAgricola } from './utils/sigpac.js'
-
+import 'leaflet.vectorgrid'
 
 const PARAM_OPTIONS = [
   { value: 'pH',   label: 'pH (H₂O)' },
@@ -307,9 +307,19 @@ export default function App() {
     drawnItems.current      = new L.FeatureGroup().addTo(map)
     gridLayer.current       = new L.FeatureGroup().addTo(map)
 
+    const sigpacLayer = L.vectorGrid.protobuf(
+      'https://sigpac-hubcloud.es/mvt/recinto@3857@pbf/{z}/{x}/{y}.pbf',
+      {
+        minNativeZoom: 12,
+        maxNativeZoom: 15,
+        vectorTileLayerStyles: {
+          recinto: { color: '#cc00ff', weight: 1.5, fillOpacity: 0, opacity: 0.8 },
+        },
+      }
+    )
     L.control.layers(
       BASEMAPS,
-      { 'Raster agronómico': rasterLayer.current },
+      { 'Raster agronómico': rasterLayer.current, 'Recintos SIGPAC': sigpacLayer },
       { position: 'topright', collapsed: true }
     ).addTo(map)
 
