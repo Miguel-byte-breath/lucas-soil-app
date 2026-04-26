@@ -42,7 +42,7 @@ function formatVal(key, val) {
   return val
 }
 
-export function exportExcel(neighbors, gridParam, sistema = 'secano', polygon = null) {
+export function exportExcel(neighbors, gridParam, sistema = 'secano', polygon = null, sigpacData = null) {
   const wb = XLSX.utils.book_new()
 
   // ── Hoja 1: Puntos vecinos ──
@@ -181,7 +181,39 @@ export function exportExcel(neighbors, gridParam, sistema = 'secano', polygon = 
     ]
     XLSX.utils.book_append_sheet(wb, ws4, 'Recintos SIGPAC')
   }
-
+else if (sigpacData) {
+    const sigpacHeader = [
+      'Provincia', 'Municipio', 'Polígono', 'Parcela', 'Recinto',
+      'Uso SIGPAC', 'Descripción uso', 'Agrícola',
+      'Superficie recinto (ha)',
+      'Admisibilidad (%)', 'Coef. regadío (%)',
+      'Zona nitratos', 'Altitud media (m)', 'Incidencias',
+    ]
+    const sigpacRows = [[
+      sigpacData.provincia    || '—',
+      sigpacData.municipio    || '—',
+      sigpacData.poligono     || '—',
+      sigpacData.parcela      || '—',
+      sigpacData.recinto      || '—',
+      sigpacData.uso          || '—',
+      sigpacData.usoDesc      || '—',
+      sigpacData.agricola     ? 'Sí' : 'No',
+      sigpacData.superficie   || '—',
+      sigpacData.admisibilidad|| '—',
+      sigpacData.regadio      || '—',
+      sigpacData.nitratos     || '—',
+      sigpacData.altitud      || '—',
+      sigpacData.incidencias  || '—',
+    ]]
+    const ws4 = XLSX.utils.aoa_to_sheet([sigpacHeader, ...sigpacRows])
+    ws4['!cols'] = [
+      { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 },
+      { wch: 8 },  { wch: 28 }, { wch: 10 },
+      { wch: 20 }, { wch: 16 }, { wch: 16 },
+      { wch: 14 }, { wch: 16 }, { wch: 20 },
+    ]
+    XLSX.utils.book_append_sheet(wb, ws4, 'Recintos SIGPAC')
+  }
   // Descargar
   XLSX.writeFile(wb, `LUCAS_suelo_${new Date().toISOString().slice(0,10)}.xlsx`)
 }
