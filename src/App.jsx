@@ -707,7 +707,7 @@ parcelaActivaIdRef.current = parcelaActivaId
       exportExcelComparativo(parcelas, pointsRef.current, sistema)
     } else {
       if (!selected) return
-      exportExcel(selected.nearest, gridParam, sistema, parcelaActiva?.geojson || null)
+      exportExcel(selected.nearest, gridParam, sistema, parcelaActiva?.geojson || null, sigpacData)
     }
   }
   return (
