@@ -1,4 +1,4 @@
-﻿{
+{
   "functions": {
     "api/sigpac.js": {
       "memory": 512,
