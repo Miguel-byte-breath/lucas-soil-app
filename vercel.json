@@ -1,7 +1,7 @@
 ﻿{
   "functions": {
-    "api/**/*.js": {
-      "memory": 1024,
+    "api/sigpac.js": {
+      "memory": 512,
       "maxDuration": 10
     }
   }
