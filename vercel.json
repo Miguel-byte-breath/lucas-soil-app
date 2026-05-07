@@ -1,7 +1,11 @@
-{
+﻿{
   "functions": {
     "api/sigpac.js": {
       "memory": 512,
+      "maxDuration": 10
+    },
+    "api/lucas/laboreo.js": {
+      "memory": 1024,
       "maxDuration": 10
     }
   }

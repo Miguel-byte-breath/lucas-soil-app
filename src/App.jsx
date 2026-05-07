@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+﻿import { useEffect, useRef, useState } from 'react'
 import L from 'leaflet'
 import '@geoman-io/leaflet-geoman-free'
 import '@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css'
@@ -283,7 +283,7 @@ export default function App() {
 
   // Cargar datos
   useEffect(() => {
-    fetch('/data/lucas_spain.json')
+    fetch('/data/lucas_spain_canonical.json')
       .then(r => r.json())
       .then(data => {
         setPoints(data.points)
