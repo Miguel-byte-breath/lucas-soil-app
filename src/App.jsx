@@ -283,7 +283,7 @@ export default function App() {
 
   // Cargar datos
   useEffect(() => {
-    fetch('/data/lucas_spain.json')
+    fetch('/data/lucas_spain_canonical.json')
       .then(r => r.json())
       .then(data => {
         setPoints(data.points)
