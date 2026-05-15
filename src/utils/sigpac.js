@@ -28,6 +28,52 @@ function wktToGeoJSON(wkt) {
   }
 }
 
+/**
+ * Normaliza un polígono de parcela: si llega como `Polygon` con anillos
+ * disjuntos —típico cuando el parser shapefile codifica una parcela
+ * multipart como un único Polygon con dos anillos en vez de un
+ * MultiPolygon—, lo reconstruye como `MultiPolygon` para que turf.intersect
+ * funcione bien. Sin este paso, turf v6.5 trata el segundo anillo como
+ * un "agujero" del primero y falla silenciosamente con los recintos que
+ * tocan la segunda parte.
+ *
+ * Los Polygon legítimos (con holes reales que SÍ están dentro del anillo
+ * exterior) se devuelven sin cambios.
+ */
+function normalizarPoligonoParcela(geojson) {
+  if (!geojson) return geojson
+  const feat = geojson.type === 'Feature'
+    ? geojson
+    : { type: 'Feature', properties: {}, geometry: geojson }
+  const geom = feat.geometry
+  if (geom?.type !== 'Polygon' || !geom.coordinates || geom.coordinates.length < 2) {
+    return feat
+  }
+  const outerRing = geom.coordinates[0]
+  let outerPoly
+  try { outerPoly = turf.polygon([outerRing]) }
+  catch { return feat }
+
+  const agujerosReales = [outerRing]
+  const partesDisjuntas = []
+  for (let i = 1; i < geom.coordinates.length; i++) {
+    const ring = geom.coordinates[i]
+    if (!ring?.length) continue
+    // Punto representativo del anillo (centro del array, evita duplicados iniciales)
+    const testPt = turf.point(ring[Math.floor(ring.length / 2)])
+    let inside = true
+    try { inside = turf.booleanPointInPolygon(testPt, outerPoly) } catch {}
+    if (inside) agujerosReales.push(ring)
+    else        partesDisjuntas.push(ring)
+  }
+  if (partesDisjuntas.length === 0) return feat   // Polygon válido con holes
+
+  // Reconstruir como MultiPolygon: parte 0 = outer + holes reales, resto = partes disjuntas sueltas
+  const partes = [agujerosReales, ...partesDisjuntas.map(p => [p])]
+  console.info('normalizarPoligonoParcela: convertido Polygon con', partesDisjuntas.length, 'parte(s) disjunta(s) a MultiPolygon')
+  return turf.multiPolygon(partes, feat.properties || {})
+}
+
 // Calcula superficie de intersección en hectáreas
 export function calcularInterseccion(poligonoUsuario, wktRecinto) {
   try {
@@ -40,7 +86,12 @@ export function calcularInterseccion(poligonoUsuario, wktRecinto) {
       console.warn('calcularInterseccion: poligonoUsuario es null')
       return null
     }
-    const interseccion = turf.intersect(poligonoUsuario, recinto)
+    // Normalizar la parcela por si viene como Polygon con anillos disjuntos
+    // (parser shapefile codifica parcelas multipart así). Sin esto, turf v6.5
+    // intersect devuelve null silenciosamente con los recintos que tocan la
+    // segunda parte de la parcela.
+    const poligonoNorm = normalizarPoligonoParcela(poligonoUsuario)
+    const interseccion = turf.intersect(poligonoNorm, recinto)
     if (!interseccion) {
       console.info('calcularInterseccion: sin intersección — recinto fuera del polígono')
       return null
