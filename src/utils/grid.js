@@ -17,17 +17,25 @@ const USDA_COLORS = {
   'clay':            '#4A2C0A',
 }
 
+// bbox sobre la geometría COMPLETA: todos los anillos del Polygon (incluido
+// el segundo anillo en parcelas multipart mal codificadas) y todas las
+// partes del MultiPolygon. Antes solo se usaba coordinates[0] y el grid
+// se construía solo sobre la primera parte.
 function getBBox(geojson) {
-  const coords = geojson.geometry.type === 'Polygon'
-    ? geojson.geometry.coordinates[0]
-    : geojson.geometry.coordinates[0][0]
+  const geom = geojson?.geometry || geojson
+  let allRings = []
+  if (geom?.type === 'Polygon')           allRings = geom.coordinates
+  else if (geom?.type === 'MultiPolygon') allRings = geom.coordinates.flat()
+
   let minLon = Infinity, maxLon = -Infinity
   let minLat = Infinity, maxLat = -Infinity
-  for (const [lon, lat] of coords) {
-    if (lon < minLon) minLon = lon
-    if (lon > maxLon) maxLon = lon
-    if (lat < minLat) minLat = lat
-    if (lat > maxLat) maxLat = lat
+  for (const ring of allRings) {
+    for (const [lon, lat] of ring) {
+      if (lon < minLon) minLon = lon
+      if (lon > maxLon) maxLon = lon
+      if (lat < minLat) minLat = lat
+      if (lat > maxLat) maxLat = lat
+    }
   }
   return { minLat, maxLat, minLon, maxLon }
 }

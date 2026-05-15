@@ -23,21 +23,43 @@ export function findNearest(origin, points, n = 5) {
 }
 
 // ¿Un punto (lat, lon) está dentro de un polígono GeoJSON?
+//
+// Maneja correctamente:
+//   - Polygon con un solo anillo (caso simple).
+//   - Polygon con agujeros reales (anillo interior contenido en el exterior):
+//     el punto en el agujero cuenta como FUERA — toggle por paridad.
+//   - Polygon multipart MAL codificado (dos anillos disjuntos en lugar de
+//     MultiPolygon, típico del parser shapefile): el punto en la segunda
+//     parte cuenta como DENTRO — el mismo toggle por paridad lo resuelve
+//     porque solo cruza el anillo de su propia parte.
+//   - MultiPolygon: dentro si está dentro de cualquier parte.
+//
+// Antes solo se leía coordinates[0], lo que ignoraba la segunda parte de
+// las parcelas multipart y dejaba sin grid esa zona.
 export function pointInPolygon(lat, lon, geojson) {
-  const coords = geojson.geometry.type === 'Polygon'
-    ? geojson.geometry.coordinates[0]
-    : geojson.geometry.coordinates[0][0]
+  const geom = geojson?.geometry || geojson
+  if (!geom) return false
 
-  let inside = false
-  for (let i = 0, j = coords.length - 1; i < coords.length; j = i++) {
-    const [xi, yi] = coords[i]  // xi=lon, yi=lat en GeoJSON
-    const [xj, yj] = coords[j]
-    const intersect =
-      (yi > lat) !== (yj > lat) &&
-      lon < ((xj - xi) * (lat - yi)) / (yj - yi) + xi
-    if (intersect) inside = !inside
+  let parts
+  if (geom.type === 'Polygon')      parts = [geom.coordinates]
+  else if (geom.type === 'MultiPolygon') parts = geom.coordinates
+  else return false
+
+  for (const rings of parts) {
+    let inside = false
+    for (const ring of rings) {
+      for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+        const [xi, yi] = ring[i]  // xi=lon, yi=lat
+        const [xj, yj] = ring[j]
+        const intersect =
+          (yi > lat) !== (yj > lat) &&
+          lon < ((xj - xi) * (lat - yi)) / (yj - yi) + xi
+        if (intersect) inside = !inside
+      }
+    }
+    if (inside) return true
   }
-  return inside
+  return false
 }
 
 // IDW: Inverse Distance Weighting — valor interpolado en un punto
