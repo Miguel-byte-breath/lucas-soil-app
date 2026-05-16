@@ -11,6 +11,7 @@ import SigpacPanel from './components/SigpacPanel.jsx'
 import { paintGrid } from './utils/grid.js'
 import { paintRaster } from './utils/raster.js'
 import { consultarPunto, consultarBbox, formatearRecinto, esAgricola } from './utils/sigpac.js'
+import { centroide } from './utils/geometry.js'
 import 'leaflet.vectorgrid'
 
 const PARAM_OPTIONS = [
@@ -85,11 +86,10 @@ export default function App() {
     if (!layer) return
     layer.addTo(map)
 
-    const ring   = geojson.geometry.type === 'MultiPolygon'
-      ? geojson.geometry.coordinates[0][0]
-      : geojson.geometry.coordinates[0]
-    const centLat = ring.reduce((s, c) => s + c[1], 0) / ring.length
-    const centLon = ring.reduce((s, c) => s + c[0], 0) / ring.length
+    // Centroide robusto: garantiza punto interior incluso en parcelas multipart
+    // (Polygon con anillos disjuntos del parser shapefile o MultiPolygon con
+    // varias partes). Sin esto, el label cae fuera de la geometría real.
+    const { lat: centLat, lon: centLon } = centroide(geojson)
 
     const label = L.marker([centLat, centLon], {
       icon: L.divIcon({
