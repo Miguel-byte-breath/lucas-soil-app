@@ -269,6 +269,34 @@ export default function App() {
       features = features.slice(0, CAP)
     }
 
+    // Zoom INMEDIATO al área de las parcelas cargadas, antes de las consultas
+    // SIGPAC asíncronas (~1s por parcela × N parcelas = varios segundos). Sin
+    // esto, el usuario ve la pantalla en el zoom inicial de toda España
+    // mientras las parcelas se cargan una a una y tiene que buscarlas a mano.
+    // El bbox se calcula sobre todos los anillos/partes para cubrir Polygon
+    // multipart y MultiPolygon correctamente.
+    if (mapObj.current) {
+      let minLat = Infinity, maxLat = -Infinity
+      let minLon = Infinity, maxLon = -Infinity
+      for (const f of features) {
+        const geom = f.geometry
+        const allRings = geom?.type === 'Polygon'
+          ? geom.coordinates
+          : geom?.type === 'MultiPolygon' ? geom.coordinates.flat() : []
+        for (const ring of allRings) {
+          for (const [lon, lat] of ring) {
+            if (lat < minLat) minLat = lat
+            if (lat > maxLat) maxLat = lat
+            if (lon < minLon) minLon = lon
+            if (lon > maxLon) maxLon = lon
+          }
+        }
+      }
+      if (isFinite(minLat)) {
+        mapObj.current.fitBounds([[minLat, minLon], [maxLat, maxLon]], { padding: [40, 40] })
+      }
+    }
+
     const startId = parcelaCount.current
     for (const feat of features) {
       await crearParcelaDesdeFeature(feat)
