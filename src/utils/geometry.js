@@ -122,3 +122,37 @@ export function centroide(feature) {
   }
   return { lat: 0, lon: 0 }
 }
+
+/**
+ * Devuelve un array con un punto representativo (interior) por cada parte de
+ * una parcela multipart. Reconoce dos formas de codificación:
+ *   - MultiPolygon con dos o más sub-polígonos.
+ *   - Polygon con anillos disjuntos (codificación del parser shapefile
+ *     casero — anillos que NO están contenidos en el exterior).
+ *
+ * Para Polygon simple o MultiPolygon de una sola parte, devuelve []
+ * (no hay nada que marcar como complemento al centroide principal).
+ *
+ * Útil para visualizar en el mapa dónde están los distintos trozos de una
+ * parcela multipart con marcadores secundarios, además del label principal.
+ * Mirror del patrón de fertipro-zonas-normativas/utils/geometry.js.
+ *
+ * @param {GeoJSON.Feature} feature
+ * @returns {Array<{ lat: number, lon: number }>}
+ */
+export function centroidesPorParte(feature) {
+  if (!feature?.geometry) return []
+  const partes = _extraerPartes(feature.geometry)
+  if (partes.length < 2) return []
+  const result = []
+  for (const parte of partes) {
+    try {
+      const sub = { type: 'Feature', geometry: { type: 'Polygon', coordinates: parte }, properties: {} }
+      const c   = turf.pointOnFeature(sub).geometry.coordinates
+      result.push({ lon: c[0], lat: c[1] })
+    } catch {
+      /* parte inválida, saltar */
+    }
+  }
+  return result
+}

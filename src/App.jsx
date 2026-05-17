@@ -11,7 +11,7 @@ import SigpacPanel from './components/SigpacPanel.jsx'
 import { paintGrid } from './utils/grid.js'
 import { paintRaster } from './utils/raster.js'
 import { consultarPunto, consultarBbox, formatearRecinto, esAgricola } from './utils/sigpac.js'
-import { centroide } from './utils/geometry.js'
+import { centroide, centroidesPorParte } from './utils/geometry.js'
 import 'leaflet.vectorgrid'
 
 const PARAM_OPTIONS = [
@@ -52,6 +52,7 @@ export default function App() {
   const parcelasRef   = useRef([])
   const labelLayers   = useRef({})
   const gridLayers    = useRef({})
+  const partsMarkers  = useRef({})   // { [parcelaId]: L.Marker[] } — marcadores secundarios para parcelas multipart
   const parcelaCount       = useRef(0)
   const parcelaActivaIdRef = useRef(null)
   const fileInputRef       = useRef(null)
@@ -86,10 +87,16 @@ export default function App() {
     if (!layer) return
     layer.addTo(map)
 
-    // Centroide robusto: garantiza punto interior incluso en parcelas multipart
-    // (Polygon con anillos disjuntos del parser shapefile o MultiPolygon con
-    // varias partes). Sin esto, el label cae fuera de la geometría real.
-    const { lat: centLat, lon: centLon } = centroide(geojson)
+    // Centroides por parte para parcelas multipart (Polygon con anillos
+    // disjuntos del parser shapefile o MultiPolygon con varias partes).
+    // El label principal se coloca en la primera parte; las partes restantes
+    // reciben marcadores secundarios para que el usuario perciba visualmente
+    // toda la geometría y no solo un trozo. Si la parcela es single-part,
+    // parts queda [] y se usa el centroide global.
+    const parts = centroidesPorParte(geojson)
+    const { lat: centLat, lon: centLon } = parts.length > 0
+      ? parts[0]
+      : centroide(geojson)
 
     const label = L.marker([centLat, centLon], {
       icon: L.divIcon({
@@ -100,6 +107,21 @@ export default function App() {
       interactive: false,
     }).addTo(map)
     labelLayers.current[id] = label
+
+    // Marcadores secundarios para las partes 2..N de parcelas multipart
+    partsMarkers.current[id] = []
+    for (let i = 1; i < parts.length; i++) {
+      const { lat: pLat, lon: pLon } = parts[i]
+      const partMarker = L.marker([pLat, pLon], {
+        icon: L.divIcon({
+          className: '',
+          html: `<div style="background:#1a3a2a;color:#e8f5ee;padding:1px 6px;border-radius:4px;font-size:10px;opacity:0.85;white-space:nowrap">${nombre} · parte ${i + 1}</div>`,
+          iconAnchor: [0, 0],
+        }),
+        interactive: false,
+      }).addTo(map)
+      partsMarkers.current[id].push(partMarker)
+    }
 
     const gLayer = new L.FeatureGroup().addTo(map)
    gLayer.on('click', (ev) => {
@@ -409,6 +431,10 @@ export default function App() {
           mapObj.current.removeLayer(gridLayers.current[id])
           delete gridLayers.current[id]
         }
+        if (partsMarkers.current[id]) {
+          partsMarkers.current[id].forEach(m => mapObj.current.removeLayer(m))
+          delete partsMarkers.current[id]
+        }
         parcelasRef.current = parcelasRef.current.filter(p => p.id !== id)
         setParcelas([...parcelasRef.current])
         if (parcelasRef.current.length > 0) {
@@ -607,6 +633,10 @@ export default function App() {
         if (gridLayers.current[numId]) {
           map.removeLayer(gridLayers.current[numId])
           delete gridLayers.current[numId]
+        }
+        if (partsMarkers.current[numId]) {
+          partsMarkers.current[numId].forEach(m => map.removeLayer(m))
+          delete partsMarkers.current[numId]
         }
         parcelasRef.current = parcelasRef.current.filter(p => p.id !== numId)
         setParcelas([...parcelasRef.current])
@@ -939,6 +969,10 @@ parcelaActivaIdRef.current = parcelaActivaId
                   if (gridLayers.current[id]) {
                     mapObj.current.removeLayer(gridLayers.current[id])
                     delete gridLayers.current[id]
+                  }
+                  if (partsMarkers.current[id]) {
+                    partsMarkers.current[id].forEach(m => mapObj.current.removeLayer(m))
+                    delete partsMarkers.current[id]
                   }
                   parcelasRef.current = parcelasRef.current.filter(p => p.id !== id)
                   setParcelas([...parcelasRef.current])
