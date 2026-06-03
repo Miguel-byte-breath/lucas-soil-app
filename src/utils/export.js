@@ -48,7 +48,7 @@ export function exportExcel(neighbors, gridParam, sistema = 'secano', polygon = 
 
   // ── Hoja 1: Puntos vecinos ──
   const keys = Object.keys(PARAM_LABELS)
-  const header = [...keys.map(k => PARAM_LABELS[k]), 'IVA (0-100)', 'Categoría IVA', 'pH score', 'Textura score', 'MOS score', 'P score', 'K score']
+  const header = [...keys.map(k => PARAM_LABELS[k]), 'IVA (0-100)', 'Categoría IVA', 'pH score', 'Textura score', 'MOS score', 'P score', 'K score', 'EC score']
   const rows = neighbors.map(pt => {
     const { indice, clases } = indiceAgronomico(pt, sistema)
     return [
@@ -60,6 +60,7 @@ export function exportExcel(neighbors, gridParam, sistema = 'secano', polygon = 
       clases.MOS?.score     ?? '—',
       clases.P?.score       ?? '—',
       clases.K?.score       ?? '—',
+      clases.EC?.score      ?? '—',
     ]
   })
   const ws1 = XLSX.utils.aoa_to_sheet([header, ...rows])
@@ -89,6 +90,20 @@ export function exportExcel(neighbors, gridParam, sistema = 'secano', polygon = 
       note,
     ]
   })
+  // Fila CE: mS/m → µS/cm (×10) para coincidir con PARAM_LABELS y Hoja 1
+  const ecVals = neighbors.filter(pt => pt.EC != null).map(pt => pt.EC)
+  if (ecVals.length) {
+    const toUScm = v => Math.round(v * 100) / 10
+    statsRows.push([
+      PARAM_LABELS['EC'],
+      ecVals.length,
+      toUScm(ecVals.reduce((a, b) => a + b, 0) / ecVals.length),
+      toUScm(Math.min(...ecVals)),
+      toUScm(Math.max(...ecVals)),
+      '',
+    ])
+  }
+
   // Fila IVA IDW centroide (solo si hay polígono)
   if (polygon) {
     const coords = polygon.geometry.coordinates[0]
@@ -99,6 +114,7 @@ export function exportExcel(neighbors, gridParam, sistema = 'secano', polygon = 
       MOS:  idw(centLat, centLon, neighbors.filter(p => p.MOS  != null), 'MOS'),
       P:    idw(centLat, centLon, neighbors.filter(p => p.P    != null), 'P'),
       K:    idw(centLat, centLon, neighbors.filter(p => p.K    != null), 'K'),
+      EC:   idw(centLat, centLon, neighbors.filter(p => p.EC   != null), 'EC'),
       usda: neighbors[0]?.usda || 'loam',
     }
     const { indice, clases } = indiceAgronomico(synth, sistema)
@@ -112,6 +128,7 @@ export function exportExcel(neighbors, gridParam, sistema = 'secano', polygon = 
       ['MOS — score/5', clases.MOS?.score ?? '—', '', '', '', clases.MOS?.label ?? '—'],
       ['P — score/5', clases.P?.score ?? '—', '', '', '', clases.P?.label ?? '—'],
       ['K — score/5', clases.K?.score ?? '—', '', '', '', clases.K?.label ?? '—'],
+      ['CE — score/5', clases.EC?.score ?? '—', '', '', '', clases.EC?.label ?? '—'],
     )
   }
   const ws2 = XLSX.utils.aoa_to_sheet([statsHeader, ...statsRows])
@@ -380,6 +397,7 @@ export function exportExcelComparativo(parcelas, allPoints, sistema = 'secano') 
       MOS:  idw(centLat, centLon, neighbors.filter(p => p.MOS  != null), 'MOS'),
       P:    idw(centLat, centLon, neighbors.filter(p => p.P    != null), 'P'),
       K:    idw(centLat, centLon, neighbors.filter(p => p.K    != null), 'K'),
+      EC:   idw(centLat, centLon, neighbors.filter(p => p.EC   != null), 'EC'),
       usda: neighbors[0]?.usda || 'loam',
     }
     const { indice, clases } = indiceAgronomico(synth, sistema)
@@ -415,6 +433,9 @@ export function exportExcelComparativo(parcelas, allPoints, sistema = 'secano') 
     { label: 'K (mg/kg)',          key: d => d.synth.K ?? '—' },
     { label: 'K score/5',          key: d => d.clases.K?.score ?? '—' },
     { label: 'K categoria',        key: d => d.clases.K?.label ?? '—' },
+    { label: 'CE (µS/cm)',         key: d => d.synth.EC != null ? Math.round(d.synth.EC * 100) / 10 : '—' },
+    { label: 'CE score/5',         key: d => d.clases.EC?.score ?? '—' },
+    { label: 'CE categoria',       key: d => d.clases.EC?.label ?? '—' },
     { label: 'Centroide Lat',      key: d => d.centLat },
     { label: 'Centroide Lon',      key: d => d.centLon },
   ]

@@ -14,6 +14,10 @@ const CAT_COLORS = {
   'Muy alto':      '#7F77DD',
   'Baja densidad': '#378ADD',
   'Compactado':    '#A32D2D',
+  'No salino':            '#639922',
+  'Ligeramente salino':   '#378ADD',
+  'Moderadamente salino': '#EF9F27',
+  'Salino':               '#A32D2D',
   'Muy buena aptitud (80-100)':        '#27500A',
   'Buena aptitud (60-80)':             '#639922',
   'Aptitud moderada (40-60)':          '#EF9F27',
@@ -57,6 +61,7 @@ const CAT_ORDER = [
   'Muy ácido','Ácido','Neutro','Básico','Muy básico',
   'Muy bajo','Bajo','Normal','Medio','Alto','Muy alto',
   'Baja densidad','Compactado',
+  'No salino','Ligeramente salino','Moderadamente salino','Salino',
 ]
 
 function LegendItem({ color, label, count, faded }) {

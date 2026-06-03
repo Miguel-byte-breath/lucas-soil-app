@@ -22,6 +22,7 @@ const PARAM_OPTIONS = [
   { value: 'N',    label: 'N — Nitrógeno' },
   { value: 'usda', label: 'Textura USDA' },
   { value: 'bd',   label: 'BD — Densidad aparente' },
+  { value: 'EC',   label: 'CE — Conductividad Eléctrica' },
   { value: 'iva',  label: 'IVA — Índice de Variabilidad Agronómica' },
 ]
 
@@ -839,7 +840,7 @@ parcelaActivaIdRef.current = parcelaActivaId
                 </tr>
               </thead>
               <tbody>
-                {[['pH (H2O)', '25%'], ['Textura USDA', '25%'], ['MOS', '20%'], ['P Fosforo', '15%'], ['K Potasio', '15%']].map(([p, w]) => (
+                {[['pH (H2O)', '25%'], ['Textura USDA', '20%'], ['MOS', '20%'], ['P Fosforo', '15%'], ['K Potasio', '15%'], ['CE Conductividad', '5%']].map(([p, w]) => (
                   <tr key={p}>
                     <td style={{ padding: '5px 8px', border: '1px solid #eee' }}>{p}</td>
                     <td style={{ padding: '5px 8px', border: '1px solid #eee' }}>{w}</td>

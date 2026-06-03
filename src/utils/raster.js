@@ -1,6 +1,6 @@
 import L from 'leaflet'
 import { haversine, idw } from './spatial.js'
-import { classifyPH, classifyMOS, classifyP, classifyK, classifyN, classifyBD, indiceAgronomico, colorIndice } from './agronomic.js'
+import { classifyPH, classifyMOS, classifyP, classifyK, classifyN, classifyBD, classifyEC, indiceAgronomico, colorIndice } from './agronomic.js'
 
 const USDA_COLORS = {
   'sand':            '#F5DEB3',
@@ -33,11 +33,12 @@ function classifyValue(param, val, usda, sistema) {
     case 'K':   return classifyK(val, usda, sistema)
     case 'N':   return classifyN(val, usda)
     case 'bd':  return classifyBD(val, usda)
+    case 'EC':  return classifyEC(val)
     default:    return null
   }
 }
 
-const AGRONOMIC_PARAMS = ['pH', 'MOS', 'P', 'K', 'N', 'bd']
+const AGRONOMIC_PARAMS = ['pH', 'MOS', 'P', 'K', 'N', 'bd', 'EC']
 
 const fieldMap = {
   pH:   'pH_w',
@@ -46,6 +47,7 @@ const fieldMap = {
   K:    'K',
   N:    'N',
   bd:   'bd',
+  EC:   'EC',
   usda: 'usda',
 }
 
@@ -108,6 +110,7 @@ export function paintRaster(map, points, param, layer, sistema = 'secano') {
           MOS:  idw(centerLat, centerLon, neighbors.filter(p => p.MOS  != null), 'MOS'),
           P:    idw(centerLat, centerLon, neighbors.filter(p => p.P    != null), 'P'),
           K:    idw(centerLat, centerLon, neighbors.filter(p => p.K    != null), 'K'),
+          EC:   idw(centerLat, centerLon, neighbors.filter(p => p.EC   != null), 'EC'),
           usda: dominantUSDA,
           bd:   null,
         }
