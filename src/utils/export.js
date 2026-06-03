@@ -38,6 +38,7 @@ function formatVal(key, val) {
   if (val == null) return '—'
   if (key === 'P_lod') return val ? 'Sí (P muy bajo)' : 'No'
   if (key === 'dist_km') return Math.round(val * 10) / 10
+  if (key === 'EC')      return Math.round(val * 100) / 10
   if (typeof val === 'number') return val
   return val
 }

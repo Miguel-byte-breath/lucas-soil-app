@@ -106,7 +106,7 @@ export default function ParamPanel({ selected, polygon }) {
         </div>
         <div className="param-row">
           <span className="param-label">CE</span>
-          <Val v={pt.EC} unit="uS/cm" dec={1} />
+          <Val v={pt.EC != null ? pt.EC * 10 : null} unit="µS/cm" dec={1} />
         </div>
       </div>
 
