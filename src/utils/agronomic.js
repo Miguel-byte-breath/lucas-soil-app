@@ -160,8 +160,24 @@ export function classifyBD(bd, usda) {
   return                { label: 'Compactado',     score: 1, color: '#A32D2D' }
 }
 
+// CE — Conductividad Eléctrica (extracto 1:5, ISO 11265:1994)
+// Recibe el valor en mS/m (unidad nativa del JSON LUCAS) y convierte
+// internamente a µS/cm para comparar con los umbrales USDA adaptados
+// (ECe USDA ÷ 9 ≈ EC₁:₅; umbrales: 200 / 400 / 800 µS/cm)
+export function classifyEC(ec_mSm) {
+  if (ec_mSm == null) return null
+  const ec = ec_mSm * 10  // mS/m → µS/cm
+  if (ec < 200) return { label: 'No salino',            score: 5, color: '#639922' }
+  if (ec < 400) return { label: 'Ligeramente salino',   score: 3, color: '#378ADD' }
+  if (ec < 800) return { label: 'Moderadamente salino', score: 2, color: '#EF9F27' }
+  return               { label: 'Salino',               score: 1, color: '#A32D2D' }
+}
+
 // Índice agronómico compuesto (0-100)
-const PESOS = { pH: 25, textura: 25, MOS: 20, P: 15, K: 15 }
+// Pesos: pH 25% | Textura 20% | MOS 20% | P 15% | K 15% | EC 5%
+// Textura reducida de 25% a 20% para incorporar EC como parámetro de salinidad.
+// Los pesos se redistribuyen proporcionalmente si algún parámetro carece de dato.
+const PESOS = { pH: 25, textura: 20, MOS: 20, P: 15, K: 15, EC: 5 }
 const MAX_SCORE = 5
 
 export function indiceAgronomico(pt, sistema) {
@@ -172,6 +188,7 @@ export function indiceAgronomico(pt, sistema) {
     MOS:     classifyMOS(pt.MOS, sistema),
     P:       classifyP(pt.P, usda, sistema),
     K:       classifyK(pt.K, usda, sistema),
+    EC:      classifyEC(pt.EC),
   }
   let pesoTotal = 0
   let suma = 0
@@ -203,5 +220,6 @@ export function classifyPoint(pt, sistema) {
     MOS:     classifyMOS(pt.MOS, sistema),
     P:       classifyP(pt.P, pt.usda, sistema),
     K:       classifyK(pt.K, pt.usda, sistema),
+    EC:      classifyEC(pt.EC),
   }
 }
