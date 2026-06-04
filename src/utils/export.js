@@ -505,7 +505,7 @@ export function exportExcelComparativo(parcelas, allPoints, sistema = 'secano') 
   XLSX.utils.book_append_sheet(wb, ws2, 'Metadatos')
 
   // ── Hoja 3: Puntos vecinos LUCAS por parcela ──
-  const lucasHeader = ['Parcela', 'Rank', 'POINTID', 'Lat', 'Lon', 'Dist (km)', 'pH (H2O)', 'MOS (%)', 'OC (g/kg)', 'N (g/kg)', 'P (mg/kg)', 'K (mg/kg)', 'CaCO3 (%)', 'Arcilla (%)', 'Arena (%)', 'Limo (%)', 'Textura USDA', 'BD (g/cm3)', 'IVA', 'Categoria IVA']
+  const lucasHeader = ['Parcela', 'Rank', 'POINTID', 'Lat', 'Lon', 'Dist (km)', 'pH (H2O)', 'MOS (%)', 'OC (g/kg)', 'N (g/kg)', 'P (mg/kg)', 'K (mg/kg)', 'CaCO3 (%)', 'CE (µS/cm)', 'Arcilla (%)', 'Arena (%)', 'Limo (%)', 'Textura USDA', 'BD (g/cm3)', 'IVA', 'Categoria IVA']
   const lucasRows = []
   datosParcelas.forEach(({ parcela }) => {
     const coords = parcela.geojson.geometry.coordinates[0]
@@ -523,6 +523,7 @@ export function exportExcelComparativo(parcelas, allPoints, sistema = 'secano') 
         Math.round(pt._d * 111 * 10) / 10,
         pt.pH_w ?? '—', pt.MOS ?? '—', pt.OC ?? '—', pt.N ?? '—',
         pt.P ?? '—', pt.K ?? '—', pt.CaCO3 ?? '—',
+        pt.EC != null ? Math.round(pt.EC * 100) / 10 : '—',
         pt.clay ?? '—', pt.sand ?? '—', pt.silt ?? '—',
         pt.usda ?? '—', pt.bd ?? '—',
         indice ?? '—', catIva,
