@@ -23,9 +23,25 @@ const agent = new https.Agent({ rejectUnauthorized: false })
  *    devuelven con los datos del OGC API + wkt convertido (nunca se pierde un
  *    recinto, aunque pierda los atributos extra).
  *
- * La forma de respuesta se mantiene identica a la version anterior
- * ({features:[{properties:<registro>}]} en bbox, array crudo en point) para
- * no tocar el frontend.
+ * Paginacion OGC (rev. 2026-08-18):
+ *  - El paso 1 (items?bbox=) pedia una unica pagina con limit=50 y usaba
+ *    ogc.features tal cual. En bboxes de parcelario denso (>50 recintos
+ *    dentro de la bbox, no solo de la parcela del usuario) la OGC API
+ *    trunca en silencio -> 200 OK con menos recintos de los que hay,
+ *    incluido a veces algun recinto de la propia parcela del usuario.
+ *    Mismo bug ya detectado y arreglado en fertipro-api-sativum, fertipro
+ *    y fertipro-zonas-normativas (ver skill gis-foundation, seccion
+ *    "Paginacion de la OGC API").
+ *  - Ahora se pagina por offset creciente hasta cubrir numberMatched, con
+ *    tope duro OGC_MAX_FEATURES y compartiendo presupuesto con la fase de
+ *    reenriquecido (OGC_PAGINATION_SHARE de FUNCTION_BUDGET_MS). Si se
+ *    agota el tope o el presupuesto antes de cubrir numberMatched, se
+ *    devuelve lo acumulado con truncado:true en vez de reventar.
+ *
+ * La forma de respuesta se mantiene practicamente identica a la version
+ * anterior ({features:[{properties:<registro>}]} en bbox, array crudo en
+ * point); en bbox se anade un campo truncado (bool) informativo, ignorable
+ * por el frontend si no lo usa.
  *
  * Licencia datos: CC BY 4.0 HVD SIGC (FEGA - Ministerio de Agricultura)
  */
@@ -35,7 +51,9 @@ const FUNCTION_BUDGET_MS = 24000   // maxDuration en vercel.json = 30s
 const FETCH_TIMEOUT_MS   = 6000
 const MAX_RETRIES        = 2       // 1 intento + 2 reintentos
 const ENRICH_BATCH       = 10      // recintos reenriquecidos por lote
-const OGC_LIMIT          = 50
+const OGC_LIMIT          = 50      // tamano de pagina de la OGC API
+const OGC_MAX_FEATURES   = 300     // tope duro de seguridad (bbox anomalamente densa)
+const OGC_PAGINATION_SHARE = 0.5   // cuota de FUNCTION_BUDGET_MS para paginar (el resto es para el reenriquecido)
 
 const OGC_BASE = 'https://sigpac-hubcloud.es/ogcapi/collections/recintos/items'
 const SCS_BASE = 'https://sigpac-hubcloud.es/servicioconsultassigpac/query/recinfobypoint/4326'
@@ -69,6 +87,65 @@ async function fetchConReintento(url, { timeoutMs = FETCH_TIMEOUT_MS, maxRetries
     }
   }
   throw ultimoError || new Error('fetchConReintento: agotados los reintentos')
+}
+
+/**
+ * Pagina la OGC API de recintos (items?bbox=) hasta cubrir numberMatched.
+ * Para de paginar cuando: se cubre numberMatched, una pagina viene vacia,
+ * se alcanza el tope OGC_MAX_FEATURES, o se agota el presupuesto de tiempo
+ * reservado para esta fase (OGC_PAGINATION_SHARE de FUNCTION_BUDGET_MS,
+ * medido desde `start`, el mismo reloj que usa la fase de reenriquecido).
+ *
+ * Si la PRIMERA pagina falla (error de red o status no-ok), se relanza el
+ * error para que el handler devuelva el mismo tipo de respuesta de error
+ * que antes. Si falla una pagina intermedia, se conserva lo ya acumulado
+ * (nunca se tira todo por un fallo tardio).
+ *
+ * Devuelve { features, numberMatched, truncado }.
+ */
+async function paginarOgcApi(bbox, start) {
+  const budgetMs = FUNCTION_BUDGET_MS * OGC_PAGINATION_SHARE
+  let features = []
+  let numberMatched = null
+  let offset = 0
+  let truncado = false
+
+  while (true) {
+    const url = OGC_BASE + '?f=json&bbox=' + bbox + '&limit=' + OGC_LIMIT + '&offset=' + offset
+    let r
+    try {
+      r = await fetchConReintento(url)
+    } catch (err) {
+      if (offset === 0) throw err
+      truncado = true
+      break
+    }
+    if (!r.ok) {
+      if (offset === 0) {
+        const err = new Error('SIGPAC OGC respondio ' + r.status)
+        err.status = r.status
+        throw err
+      }
+      truncado = true
+      break
+    }
+
+    const data = await r.json()
+    const pageFeats = Array.isArray(data.features) ? data.features : []
+    features = features.concat(pageFeats)
+    numberMatched = data.numberMatched ?? numberMatched
+
+    const cubierto       = numberMatched != null && features.length >= numberMatched
+    const sinMasPaginas  = pageFeats.length === 0
+    const topeAlcanzado  = features.length >= OGC_MAX_FEATURES
+    const sinPresupuesto = (Date.now() - start) >= budgetMs
+
+    if ((topeAlcanzado || sinPresupuesto) && !cubierto) truncado = true
+    if (cubierto || sinMasPaginas || topeAlcanzado || sinPresupuesto) break
+    offset += OGC_LIMIT
+  }
+
+  return { features: features.slice(0, OGC_MAX_FEATURES), numberMatched, truncado }
 }
 
 /** Clave de recinto: provincia-municipio-poligono-parcela-recinto */
@@ -155,23 +232,20 @@ module.exports = async function handler(req, res) {
   if (type === 'bbox') {
     if (!bbox) return res.status(400).json({ error: 'bbox requerido' })
 
-    // 1. OGC API -> lista COMPLETA de recintos que intersecan el bbox
-    const ogcUrl = OGC_BASE + '?f=json&bbox=' + bbox + '&limit=' + OGC_LIMIT
-    let ogc
+    // 1. OGC API -> recintos que intersecan el bbox, paginando por offset
+    //    hasta cubrir numberMatched (ver paginarOgcApi arriba).
+    let paginado
     try {
-      const r = await fetchConReintento(ogcUrl)
-      if (!r.ok) {
-        return res.status(r.status).json({ error: 'SIGPAC OGC respondio ' + r.status })
-      }
-      ogc = await r.json()
+      paginado = await paginarOgcApi(bbox, start)
     } catch (err) {
+      if (err.status) return res.status(err.status).json({ error: 'SIGPAC OGC respondio ' + err.status })
       return res.status(502).json({ error: 'Error conectando con SIGPAC', detail: err.message })
     }
 
-    const feats = Array.isArray(ogc.features) ? ogc.features : []
+    const feats = paginado.features
     if (!feats.length) {
       res.setHeader('Cache-Control', 's-maxage=600')
-      return res.status(200).json({ features: [] })
+      return res.status(200).json({ features: [], truncado: paginado.truncado })
     }
 
     // 2. Reenriquecer cada recinto via recinfobypoint, en lotes, con guard de tiempo
@@ -192,7 +266,7 @@ module.exports = async function handler(req, res) {
     }
 
     res.setHeader('Cache-Control', 's-maxage=600')
-    return res.status(200).json({ features: enriched })
+    return res.status(200).json({ features: enriched, truncado: paginado.truncado })
   }
 
   return res.status(400).json({ error: 'type debe ser point o bbox' })
