@@ -393,7 +393,9 @@ export default function App() {
         minNativeZoom: 12,
         maxNativeZoom: 15,
         vectorTileLayerStyles: {
-          recinto: { color: '#cc00ff', weight: 1.5, fillOpacity: 0, opacity: 0.8 },
+          // weight bajo a propósito: SIGPAC solo sirve teselas MVT hasta z15 y Leaflet
+          // las amplía por encima (el trazo se duplica por nivel: z18 ≈ 8× el grosor).
+          recinto: { color: '#cc00ff', weight: 0.75, fillOpacity: 0, opacity: 0.8 },
         },
       }
     )
