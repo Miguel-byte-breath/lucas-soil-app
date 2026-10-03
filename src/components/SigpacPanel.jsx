@@ -14,26 +14,63 @@ const USO_COLOR = (uso) => {
   return '#ccc'
 }
 
-export default function SigpacPanel({ data, loading }) {
-  if (loading) return (
-    <div className="panel-section">
+// Formatea un valor numérico con su unidad; '—' si no hay dato.
+const fmt = (v, unidad) => (v == null || v === '' ? '—' : `${v}${unidad}`)
+
+const ORIGEN_TXT = {
+  clic:    'Punto consultado: clic en el mapa',
+  parcela: 'Punto consultado: punto de referencia de la parcela',
+}
+
+function Cabecera({ origen }) {
+  return (
+    <>
       <h3>Recinto SIGPAC</h3>
-      <p className="dist-note" style={{ marginTop: 6 }}>Consultando SIGPAC...</p>
+      {origen && ORIGEN_TXT[origen] && (
+        <p className="dist-note" style={{ marginTop: 4 }}>{ORIGEN_TXT[origen]}</p>
+      )}
+    </>
+  )
+}
+
+function Mensaje({ origen, texto, color }) {
+  return (
+    <div className="panel-section">
+      <Cabecera origen={origen} />
+      <p className="dist-note" style={{ marginTop: 6, ...(color ? { color } : {}) }}>{texto}</p>
     </div>
+  )
+}
+
+export default function SigpacPanel({ data, loading, estado, origen }) {
+  if (loading) return <Mensaje origen={origen} texto="Consultando SIGPAC..." />
+
+  if (estado === 'error') return (
+    <Mensaje
+      origen={origen}
+      color="var(--color-text-danger)"
+      texto="No se pudo consultar SIGPAC (servicio no disponible). Reintenta en unos segundos."
+    />
+  )
+
+  if (estado === 'vacio') return (
+    <Mensaje origen={origen} texto="No hay recinto SIGPAC en este punto." />
   )
 
   if (!data) return (
-    <div className="panel-section">
-      <h3>Recinto SIGPAC</h3>
-      <p className="dist-note" style={{ marginTop: 6 }}>Sin datos SIGPAC para este punto</p>
-    </div>
+    <Mensaje texto="Haz clic en el mapa o crea una parcela para consultar el recinto SIGPAC." />
   )
 
   const agricola = USOS_AGRICOLAS.has(data.uso)
+  // Referencia oficial completa: provincia-municipio-agregado-zona-polígono-parcela-recinto
+  const referencia = [
+    data.provincia, data.municipio, data.agregado, data.zona,
+    data.poligono, data.parcela, data.recinto,
+  ].join('-')
 
   return (
     <div className="panel-section">
-      <h3>Recinto SIGPAC</h3>
+      <Cabecera origen={origen} />
 
       <div style={{
         display: 'flex', alignItems: 'center', gap: 8,
@@ -61,25 +98,23 @@ export default function SigpacPanel({ data, loading }) {
 
       <div className="param-row">
         <span className="param-label">Referencia</span>
-        <span className="param-value" style={{ fontSize: 12 }}>
-          {data.provincia}-{data.municipio}-{data.poligono}-{data.parcela}-{data.recinto}
-        </span>
+        <span className="param-value" style={{ fontSize: 12 }}>{referencia}</span>
       </div>
       <div className="param-row">
-        <span className="param-label">Municipio</span>
+        <span className="param-label">Municipio (código)</span>
         <span className="param-value">{data.municipio}</span>
       </div>
       <div className="param-row">
         <span className="param-label">Superficie</span>
-        <span className="param-value">{data.superficie} ha</span>
+        <span className="param-value">{fmt(data.superficie, ' ha')}</span>
       </div>
       <div className="param-row">
         <span className="param-label">Admisibilidad</span>
-        <span className="param-value">{data.admisibilidad}%</span>
+        <span className="param-value">{fmt(data.admisibilidad, '%')}</span>
       </div>
       <div className="param-row">
         <span className="param-label">Coef. regadío</span>
-        <span className="param-value">{data.regadio}%</span>
+        <span className="param-value">{fmt(data.regadio, '%')}</span>
       </div>
       <div className="param-row">
         <span className="param-label">Incidencias</span>
@@ -95,7 +130,7 @@ export default function SigpacPanel({ data, loading }) {
       </div>
       <div className="param-row">
         <span className="param-label">Altitud media</span>
-        <span className="param-value">{data.altitud} m</span>
+        <span className="param-value">{fmt(data.altitud, ' m')}</span>
       </div>
     </div>
   )

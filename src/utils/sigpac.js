@@ -158,16 +158,19 @@ export function esAgricola(uso) {
 
 const PROXY = '/api/sigpac'
 
-// Consulta recinto por punto (clic en mapa)
+// Consulta recinto por punto (clic en mapa o punto de referencia de parcela).
+// Devuelve { estado: 'ok', data } | { estado: 'vacio' } | { estado: 'error', detalle }
+// para que la UI distinga "SIGPAC no responde" de "no hay recinto en este punto".
 export async function consultarPunto(lat, lon) {
   try {
     const url = `${PROXY}?type=point&lon=${lon}&lat=${lat}`
     const res = await fetch(url)
-    if (!res.ok) return null
+    if (!res.ok) return { estado: 'error', detalle: 'HTTP ' + res.status }
     const data = await res.json()
-    return data
-  } catch {
-    return null
+    const vacio = Array.isArray(data) ? data.length === 0 : !data
+    return vacio ? { estado: 'vacio' } : { estado: 'ok', data }
+  } catch (err) {
+    return { estado: 'error', detalle: err?.message || 'error de red' }
   }
 }
 
@@ -204,20 +207,25 @@ export function formatearRecinto(data) {
   // La API devuelve un array — cogemos el primer elemento
   const r = Array.isArray(data) ? data[0] : (data.properties || data)
   if (!r) return null
+  const cod = (v) => (v != null ? String(v) : '—')
+  // Valores numéricos SIN unidad (null si no hay dato): la unidad la pone
+  // quien los muestra (panel) y el Excel recibe números, no texto.
   return {
     uso:        r.uso_sigpac || '—',
     usoDesc:    USO_SIGPAC[r.uso_sigpac] || '—',
     agricola:   esAgricola(r.uso_sigpac),
-    provincia:  r.provincia  != null ? String(r.provincia)  : '—',
-    municipio:  r.municipio  != null ? String(r.municipio)  : '—',
-    poligono:   r.poligono   != null ? String(r.poligono)   : '—',
-    parcela:    r.parcela    != null ? String(r.parcela)    : '—',
-    recinto:    r.recinto    != null ? String(r.recinto)    : '—',
-    superficie: r.superficie != null ? parseFloat(r.superficie.toFixed(4)) : '—',
-    admisibilidad: r.admisibilidad != null ? r.admisibilidad : '—',
+    provincia:  cod(r.provincia),
+    municipio:  cod(r.municipio),
+    agregado:   cod(r.agregado),
+    zona:       cod(r.zona),
+    poligono:   cod(r.poligono),
+    parcela:    cod(r.parcela),
+    recinto:    cod(r.recinto),
+    superficie: r.superficie != null ? parseFloat(Number(r.superficie).toFixed(4)) : null,
+    admisibilidad: r.admisibilidad ?? null,
     nitratos:   r.zona_nitrato ? 'Sí' : 'No',
-    altitud:    r.altitud    != null ? r.altitud + ' m'    : '—',
-    regadio:    r.coef_regadio != null ? r.coef_regadio + '%' : '—',
+    altitud:    r.altitud ?? null,
+    regadio:    r.coef_regadio ?? null,
     incidencias: r.incidencias || '—',
     wkt:        r.wkt || null,
   }

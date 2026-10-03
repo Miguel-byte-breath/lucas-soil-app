@@ -69,6 +69,39 @@ export default function App() {
   const [sistema,      setSistema]      = useState('secano')
   const [sigpacData,   setSigpacData]   = useState(null)
   const [sigpacLoading,setSigpacLoading]= useState(false)
+  const [sigpacEstado, setSigpacEstado] = useState(null)   // 'ok' | 'vacio' | 'error' | null
+  const [sigpacOrigen, setSigpacOrigen] = useState(null)   // 'clic' | 'parcela' | null
+  const sigpacReqRef = useRef(0)
+
+  // Consulta SIGPAC por punto y actualiza el panel. Si llega la respuesta de
+  // una consulta anterior (el usuario ya hizo otro clic), se descarta.
+  const cargarSigpacPunto = async (lat, lon, origen) => {
+    const reqId = ++sigpacReqRef.current
+    setSigpacLoading(true)
+    setSigpacData(null)
+    setSigpacEstado(null)
+    setSigpacOrigen(origen)
+    const r = await consultarPunto(lat, lon)
+    if (reqId !== sigpacReqRef.current) return
+    setSigpacData(r.estado === 'ok' ? formatearRecinto(r.data) : null)
+    setSigpacEstado(r.estado)
+    setSigpacLoading(false)
+  }
+
+  // Recinto SIGPAC de una parcela = el de su punto de referencia (centLat/centLon),
+  // el mismo punto que se usa para buscar los puntos LUCAS vecinos.
+  const cargarSigpacParcela = (id) => {
+    const pa = parcelasRef.current.find(x => x.id === id)
+    if (pa) cargarSigpacPunto(pa.centLat, pa.centLon, 'parcela')
+  }
+
+  const limpiarSigpac = () => {
+    sigpacReqRef.current += 1
+    setSigpacData(null)
+    setSigpacEstado(null)
+    setSigpacOrigen(null)
+    setSigpacLoading(false)
+  }
   const [infoModal,    setInfoModal]    = useState(false)
 
   // ── Cargar parcela desde GeoJSON feature (externo) ──
@@ -134,12 +167,7 @@ export default function App() {
         const nearest = findNearest({ lat: p.centLat, lng: p.centLon }, pointsRef.current, 5)
         setSelected({ clicked: nearest[0], nearest })
       }
-      setSigpacLoading(true)
-      setSigpacData(null)
-      consultarPunto(ev.latlng.lat, ev.latlng.lng)
-        .then(raw => setSigpacData(formatearRecinto(raw)))
-        .catch(() => setSigpacData(null))
-        .finally(() => setSigpacLoading(false))
+      cargarSigpacParcela(id)
     })
     gridLayers.current[id] = gLayer
 
@@ -152,12 +180,7 @@ export default function App() {
         const nearest = findNearest({ lat: p.centLat, lng: p.centLon }, pointsRef.current, 5)
         setSelected({ clicked: nearest[0], nearest })
       }
-      setSigpacLoading(true)
-      setSigpacData(null)
-      consultarPunto(ev.latlng.lat, ev.latlng.lng)
-        .then(raw => setSigpacData(formatearRecinto(raw)))
-        .catch(() => setSigpacData(null))
-        .finally(() => setSigpacLoading(false))
+      cargarSigpacParcela(id)
     })
 
     const nuevaParcela = { id, nombre, geojson, layer, centLat, centLon }
@@ -326,6 +349,10 @@ export default function App() {
     }
 
     const nuevas = parcelasRef.current.filter(p => p.id > startId)
+    // Panel SIGPAC: recinto en el punto de referencia de la última parcela
+    // cargada (la que queda activa). Una sola consulta, no una por parcela.
+    const ultima = nuevas[nuevas.length - 1]
+    if (ultima) cargarSigpacPunto(ultima.centLat, ultima.centLon, 'parcela')
     if (nuevas.length && mapObj.current) {
       const group = L.featureGroup(nuevas.map(p => p.layer))
       mapObj.current.fitBounds(group.getBounds(), { padding: [40, 40] })
@@ -443,7 +470,7 @@ export default function App() {
         } else {
           setParcelaActivaId(null)
           setSelected(null)
-          setSigpacData(null)
+          limpiarSigpac()
           window._sigpacPoligono = null
           window._sigpacRecintos = []
         }
@@ -538,8 +565,9 @@ export default function App() {
       const geojson = e.layer.toGeoJSON()
 
       const coords = geojson.geometry.coordinates[0]
-      const centLat = coords.reduce((s, c) => s + c[1], 0) / coords.length
-      const centLon = coords.reduce((s, c) => s + c[0], 0) / coords.length
+      // Punto de referencia: mismo centroide() que las parcelas subidas
+      // (pointOnFeature: siempre dentro del polígono, también en formas cóncavas)
+      const { lat: centLat, lon: centLon } = centroide(geojson)
 
       // Etiqueta en mapa
       const label = L.marker([centLat, centLon], {
@@ -563,12 +591,7 @@ export default function App() {
         const nearest = findNearest({ lat: p.centLat, lng: p.centLon }, pointsRef.current, 5)
         setSelected({ clicked: nearest[0], nearest })
       }
-      setSigpacLoading(true)
-      setSigpacData(null)
-      consultarPunto(ev.latlng.lat, ev.latlng.lng)
-        .then(raw => setSigpacData(formatearRecinto(raw)))
-        .catch(() => setSigpacData(null))
-        .finally(() => setSigpacLoading(false))
+      cargarSigpacParcela(id)
     })
     gridLayers.current[id] = gLayer
       gridLayers.current[id] = gLayer
@@ -583,18 +606,14 @@ export default function App() {
           const nearest = findNearest({ lat: parcela.centLat, lng: parcela.centLon }, pointsRef.current, 5)
           setSelected({ clicked: nearest[0], nearest })
         }
-        setSigpacLoading(true)
-        setSigpacData(null)
-        consultarPunto(e.latlng.lat, e.latlng.lng)
-          .then(raw => setSigpacData(formatearRecinto(raw)))
-          .catch(() => setSigpacData(null))
-          .finally(() => setSigpacLoading(false))
+        cargarSigpacParcela(id)
       })
 
       const nuevaParcela = { id, nombre, geojson, layer: e.layer, centLat, centLon }
       parcelasRef.current = [...parcelasRef.current, nuevaParcela]
       setParcelas([...parcelasRef.current])
       setParcelaActivaId(id)
+      cargarSigpacPunto(centLat, centLon, 'parcela')
 
       // Puntos vecinos del centroide
       const pts = pointsRef.current
@@ -646,7 +665,7 @@ export default function App() {
         } else {
           setParcelaActivaId(null)
           setSelected(null)
-          setSigpacData(null)
+          limpiarSigpac()
           window._sigpacPoligono = null
           window._sigpacRecintos = []
         }
@@ -700,17 +719,8 @@ export default function App() {
       clickMarkerRef.current = L.marker([lat, lng], { icon: pinIcon, interactive: false }).addTo(mapObj.current)
       setClickCoords({ lat: lat.toFixed(6), lng: lng.toFixed(6) })
 
-      // Consultar SIGPAC por punto
-      setSigpacLoading(true)
-      setSigpacData(null)
-      try {
-        const raw = await consultarPunto(lat, lng)
-        setSigpacData(formatearRecinto(raw))
-      } catch {
-        setSigpacData(null)
-      } finally {
-        setSigpacLoading(false)
-      }
+      // Consultar SIGPAC en el punto del clic
+      await cargarSigpacPunto(lat, lng, 'clic')
     })
   }, [points])
 
@@ -982,7 +992,7 @@ parcelaActivaIdRef.current = parcelaActivaId
                   } else {
                     setParcelaActivaId(null)
                     setSelected(null)
-                    setSigpacData(null)
+                    limpiarSigpac()
                     window._sigpacPoligono = null
                     window._sigpacRecintos = []
                   }
@@ -1002,7 +1012,7 @@ parcelaActivaIdRef.current = parcelaActivaId
           ) : (
             <>
               <ParamPanel selected={selected} polygon={parcelaActiva?.geojson || null} />
-              <SigpacPanel data={sigpacData} loading={sigpacLoading} />
+              <SigpacPanel data={sigpacData} loading={sigpacLoading} estado={sigpacEstado} origen={sigpacOrigen} />
               <button className="btn-export" onClick={handleExport}>
                 Descargar informe Excel
               </button>

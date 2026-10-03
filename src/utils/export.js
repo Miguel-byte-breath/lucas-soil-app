@@ -155,7 +155,7 @@ export function exportExcel(neighbors, gridParam, sistema = 'secano', polygon = 
   // ── Hoja 4: Recintos SIGPAC ──
   if (window._sigpacRecintos && window._sigpacRecintos.length > 0) {
     const sigpacHeader = [
-      'Provincia', 'Municipio', 'Polígono', 'Parcela', 'Recinto',
+      'Provincia', 'Municipio', 'Agregado', 'Zona', 'Polígono', 'Parcela', 'Recinto',
       'Uso SIGPAC', 'Descripción uso', 'Agrícola',
       'Superficie recinto (ha)', 'Sup. intersección (ha)',
       'Admisibilidad (%)', 'Coef. regadío (%)',
@@ -173,26 +173,28 @@ export function exportExcel(neighbors, gridParam, sistema = 'secano', polygon = 
           ? parseFloat(calcularInterseccion(poligono, r.wkt))
           : '—'
         return [
-          r.provincia    || '—',
-          r.municipio    || '—',
-          r.poligono     || '—',
-          r.parcela      || '—',
-          r.recinto      || '—',
-          r.uso          || '—',
-          r.usoDesc      || '—',
+          r.provincia    ?? '—',
+          r.municipio    ?? '—',
+          r.agregado     ?? '—',
+          r.zona         ?? '—',
+          r.poligono     ?? '—',
+          r.parcela      ?? '—',
+          r.recinto      ?? '—',
+          r.uso          ?? '—',
+          r.usoDesc      ?? '—',
           r.agricola     ? 'Sí' : 'No',
-          r.superficie   || '—',
+          r.superficie   ?? '—',
           supInterseccion,
-          r.admisibilidad|| '—',
-          r.regadio      || '—',
-          r.nitratos     || '—',
-          r.altitud      || '—',
-          r.incidencias  || '—',
+          r.admisibilidad?? '—',
+          r.regadio      ?? '—',
+          r.nitratos     ?? '—',
+          r.altitud      ?? '—',
+          r.incidencias  ?? '—',
         ]
       })
     const ws4 = XLSX.utils.aoa_to_sheet([sigpacHeader, ...sigpacRows])
     ws4['!cols'] = [
-      { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 },
+      { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 },
       { wch: 8 },  { wch: 28 }, { wch: 10 },
       { wch: 20 }, { wch: 20 }, { wch: 16 }, { wch: 16 },
       { wch: 14 }, { wch: 16 }, { wch: 20 },
@@ -201,31 +203,33 @@ export function exportExcel(neighbors, gridParam, sistema = 'secano', polygon = 
   }
 else if (sigpacData) {
     const sigpacHeader = [
-      'Provincia', 'Municipio', 'Polígono', 'Parcela', 'Recinto',
+      'Provincia', 'Municipio', 'Agregado', 'Zona', 'Polígono', 'Parcela', 'Recinto',
       'Uso SIGPAC', 'Descripción uso', 'Agrícola',
       'Superficie recinto (ha)',
       'Admisibilidad (%)', 'Coef. regadío (%)',
       'Zona nitratos', 'Altitud media (m)', 'Incidencias',
     ]
     const sigpacRows = [[
-      sigpacData.provincia    || '—',
-      sigpacData.municipio    || '—',
-      sigpacData.poligono     || '—',
-      sigpacData.parcela      || '—',
-      sigpacData.recinto      || '—',
-      sigpacData.uso          || '—',
-      sigpacData.usoDesc      || '—',
+      sigpacData.provincia    ?? '—',
+      sigpacData.municipio    ?? '—',
+      sigpacData.agregado     ?? '—',
+      sigpacData.zona         ?? '—',
+      sigpacData.poligono     ?? '—',
+      sigpacData.parcela      ?? '—',
+      sigpacData.recinto      ?? '—',
+      sigpacData.uso          ?? '—',
+      sigpacData.usoDesc      ?? '—',
       sigpacData.agricola     ? 'Sí' : 'No',
-      sigpacData.superficie   || '—',
-      sigpacData.admisibilidad|| '—',
-      sigpacData.regadio      || '—',
-      sigpacData.nitratos     || '—',
-      sigpacData.altitud      || '—',
-      sigpacData.incidencias  || '—',
+      sigpacData.superficie   ?? '—',
+      sigpacData.admisibilidad?? '—',
+      sigpacData.regadio      ?? '—',
+      sigpacData.nitratos     ?? '—',
+      sigpacData.altitud      ?? '—',
+      sigpacData.incidencias  ?? '—',
     ]]
     const ws4 = XLSX.utils.aoa_to_sheet([sigpacHeader, ...sigpacRows])
     ws4['!cols'] = [
-      { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 },
+      { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 },
       { wch: 8 },  { wch: 28 }, { wch: 10 },
       { wch: 20 }, { wch: 16 }, { wch: 16 },
       { wch: 14 }, { wch: 16 }, { wch: 20 },
@@ -537,7 +541,7 @@ export function exportExcelComparativo(parcelas, allPoints, sistema = 'secano') 
   // ── Hoja 4: Recintos SIGPAC por parcela ──
   if (window._sigpacRecintos && window._sigpacRecintos.length > 0) {
     const sigpacHeader = [
-      'Parcela', 'Provincia', 'Municipio', 'Poligono', 'Recinto',
+      'Parcela', 'Provincia', 'Municipio', 'Agregado', 'Zona', 'Poligono', 'Parcela SIGPAC', 'Recinto',
       'Uso SIGPAC', 'Descripcion uso', 'Agricola',
       'Superficie (ha)', 'Sup. interseccion (ha)',
       'Admisibilidad (%)', 'Coef. regadio (%)',
@@ -559,19 +563,20 @@ export function exportExcelComparativo(parcelas, allPoints, sistema = 'secano') 
             : '—'
           sigpacRows.push([
             parcela.nombre,
-            r.provincia || '—', r.municipio || '—',
-            r.poligono || '—', r.recinto || '—',
-            r.uso || '—', r.usoDesc || '—',
+            r.provincia ?? '—', r.municipio ?? '—',
+            r.agregado ?? '—', r.zona ?? '—',
+            r.poligono ?? '—', r.parcela ?? '—', r.recinto ?? '—',
+            r.uso ?? '—', r.usoDesc ?? '—',
             r.agricola ? 'Si' : 'No',
-            r.superficie || '—', supInterseccion,
-            r.admisibilidad || '—', r.regadio || '—',
-            r.nitratos || '—', r.altitud || '—',
-            r.incidencias || '—',
+            r.superficie ?? '—', supInterseccion,
+            r.admisibilidad ?? '—', r.regadio ?? '—',
+            r.nitratos ?? '—', r.altitud ?? '—',
+            r.incidencias ?? '—',
           ])
         })
     })
     const ws4 = XLSX.utils.aoa_to_sheet([sigpacHeader, ...sigpacRows])
-    ws4['!cols'] = sigpacHeader.map((_, i) => ({ wch: i === 6 ? 28 : 14 }))
+    ws4['!cols'] = sigpacHeader.map(h => ({ wch: h === 'Descripcion uso' ? 28 : 14 }))
     XLSX.utils.book_append_sheet(wb, ws4, 'Recintos SIGPAC')
   }
 
